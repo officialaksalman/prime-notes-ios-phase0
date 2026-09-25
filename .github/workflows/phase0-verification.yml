@@ -59,10 +59,15 @@ jobs:
         run: |
           set -o pipefail
           f=phase0-ios-verification/gradle/libs.versions.toml
-          sed -i '' -E "s/^kotlin = .*/kotlin = \"${{ matrix.kotlin }}\"/" "$f"
-          sed -i '' -E "s/^ksp = .*/ksp = \"${{ matrix.ksp }}\"/" "$f"
+          # Anchor on keys that CANNOT collide with a [plugins] alias: a pattern like
+          # "^ksp = " matches both the [versions] entry and the [plugins] declaration,
+          # and rewrites the plugin declaration into a bare string.
+          sed -i '' -E "s/^kotlinVersion = .*/kotlinVersion = \"${{ matrix.kotlin }}\"/" "$f"
+          sed -i '' -E "s/^kspVersion = .*/kspVersion = \"${{ matrix.ksp }}\"/" "$f"
           echo "--- resolved catalog versions ---"
-          grep -E '^(kotlin|ksp|compose|room|sqlite|agp|ktor|supabase) *= ' "$f" || true
+          grep -E '^(kotlinVersion|kspVersion|composeVersion|roomVersion|sqliteVersion|agpVersion|ktorVersion|supabaseVersion) =' "$f" || true
+          echo "--- plugin declarations must still be intact ---"
+          grep -E '^ksp = |^room = ' "$f" || true
 
       - name: Toolchain report
         continue-on-error: true

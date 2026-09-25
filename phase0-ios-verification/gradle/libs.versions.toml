@@ -1,43 +1,49 @@
 [versions]
-# Kotlin is overridden by the CI matrix: 2.2.10 = what production runs,
-# 2.2.20 = what Compose Multiplatform recommends for iOS.
-kotlin = "2.2.20"
-ksp = "2.2.20-2.0.4"
-compose = "1.10.3"
-agp = "9.4.0"
+# NOTE: version keys must NOT be named the same as any [plugins] alias.
+# The CI matrix rewrites these lines with sed, and a key that also names a plugin
+# alias matches two lines — which silently overwrites the plugin declaration.
+# (That bug turned `ksp = { id = ..., version.ref = ... }` into a bare string and
+# failed the build with "Invalid plugin notation".)
+#
+# kotlinVersion is overridden by the CI matrix:
+#   2.2.10 = what production runs, 2.2.20 = what Compose Multiplatform recommends for iOS.
+kotlinVersion = "2.2.20"
+kspVersion = "2.2.20-2.0.4"
+composeVersion = "1.10.3"
+agpVersion = "9.4.0"
 
 # Deliberately the SAME Room production already uses: the question is whether the
-# existing Android Room setup can gain an iOS target, not whether a newer generation exists.
-room = "2.8.5"
-sqlite = "2.7.1"
+# existing Android Room setup can gain an iOS target, not whether a newer one exists.
+roomVersion = "2.8.5"
+sqliteVersion = "2.7.1"
 
-ktor = "3.1.2"
-supabase = "3.1.4"
-coroutines = "1.11.0"
-serialization = "1.7.3"
+ktorVersion = "3.1.2"
+supabaseVersion = "3.1.4"
+coroutinesVersion = "1.11.0"
+serializationVersion = "1.7.3"
 
 [libraries]
-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomVersion" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomVersion" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqliteVersion" }
 
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
-ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorVersion" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktorVersion" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktorVersion" }
 
-supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
+supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabaseVersion" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
 
-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutinesVersion" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesVersion" }
+serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationVersion" }
 
 [plugins]
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
-room = { id = "androidx.room", version.ref = "room" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinVersion" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinVersion" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinVersion" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeVersion" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }
+androidLibrary = { id = "com.android.library", version.ref = "agpVersion" }
+room = { id = "androidx.room", version.ref = "roomVersion" }
