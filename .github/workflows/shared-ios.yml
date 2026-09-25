@@ -1,25 +1,25 @@
 # Prime Notes — :shared, compiled and tested for iOS (sandbox only)
 #
-# This is the only place any of :shared's iOS half is ever compiled. The project is developed on
-# Windows, where Kotlin/Native cannot build Apple targets at all, so `iosMain`, the iOS actuals
-# and the iOS test runs have no other way of being checked.
+# Compiles :shared for iosSimulatorArm64, links the Shared framework, and runs the module's
+# commonTest suite on the iOS simulator. This is the only place :shared's iOS half is ever built:
+# the project is developed on Windows, where Kotlin/Native cannot build Apple targets, so
+# `iosMain`, the iOS actuals and the iOS test runs have no other way of being checked.
 #
 # WHY THIS REPOSITORY, AND NOT PRIME-NOTES: Prime Notes is private, so macOS minutes spent there
-# are billable and multiplied. This sandbox is public, where they are free. Nothing here modifies
-# the production repository — it is only ever checked out, read-only.
+# are billable and multiplied. This sandbox is public, where they are free.
 #
-# HOW IT GETS THE CODE: a fine-grained token (`PRIME_NOTES_READ_PAT`, Contents: Read, scoped to
-# Prime-Notes alone) lets this public workflow clone the private repository. That choice matters:
-# a copy committed here would be a snapshot that drifts, and a green run would then describe code
-# nobody has rather than the code that is committed.
+# WHAT IT BUILDS: `shared-ios/`, a committed copy of the module. See `shared-ios/SOURCE.md` for
+# where that copy came from, how to re-sync it, and what it costs. No token and no secret are
+# involved, because the code and the workflow live in the same repository. The price of that
+# convenience is stated plainly there: the verified code is a snapshot, not the repository, and
+# it drifts.
 #
-# HOW THE RESULT IS READ BACK: no GitHub token or CLI is available to the agent driving these
-# runs, so a run cannot be inspected from outside. It therefore commits RESULTS.md back here,
-# which is read over git. Commits made by GITHUB_TOKEN do not re-trigger workflows, so the results
-# commit cannot cause a loop.
+# HOW THE RESULT IS READ BACK: no token or CLI is available to the agent driving these runs, so a
+# run cannot be inspected from outside it. It therefore commits RESULTS.md back here, which is
+# read over git. Commits made by GITHUB_TOKEN do not re-trigger workflows, so the results commit
+# cannot cause a loop.
 #
-# WHEN IT RUNS: on a push here, and on demand. Nothing watches Prime-Notes, so dispatch this after
-# a change to :shared (Phase 2b onward) and give it the ref to verify.
+# WHEN IT RUNS: on a push here, and on demand. Dispatching lets you pick the branch in the UI.
 #
 # FAILURE DETECTION: every gradlew step sets `pipefail`. Without it a `gradlew ... | tee log`
 # pipeline reports tee's exit code (0) and a failed build is recorded as a success — a bug that
@@ -31,11 +31,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      ref:
-        description: Prime-Notes ref to verify (branch, tag or SHA)
-        required: false
-        default: main
 
 permissions:
   contents: write
@@ -46,18 +41,11 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     steps:
-      - name: Check out Prime-Notes, read-only
-        uses: actions/checkout@v4
-        with:
-          repository: officialaksalman/Prime-Notes
-          ref: ${{ inputs.ref || 'main' }}
-          token: ${{ secrets.PRIME_NOTES_READ_PAT }}
-          path: prime-notes
+      - uses: actions/checkout@v4
 
       # gradlew is committed from Windows and carries mode 100644, so git records it as not
       # executable and every invocation dies with "Permission denied" until this is fixed.
       - name: Make gradlew executable
-        working-directory: prime-notes
         run: chmod +x gradlew
 
       # Kotlin/Native 2.3.20 hardcodes a Swift runtime search path for a specific Xcode that this
@@ -112,16 +100,15 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          mkdir -p "$GITHUB_WORKSPACE/logs"
+          mkdir -p logs
           {
-            echo "### runner";     sw_vers
-            echo "### xcode";      xcodebuild -version
-            echo "### java";       java -version 2>&1
-            echo "### gradle";     ./gradlew --version
-            echo "### checked out"; git rev-parse HEAD
-            echo "### simulators"; xcrun simctl list devices available | head -20
-          } 2>&1 | tee "$GITHUB_WORKSPACE/logs/00-toolchain.txt"
-        working-directory: prime-notes
+            echo "### runner";       sw_vers
+            echo "### xcode";        xcodebuild -version
+            echo "### java";         java -version 2>&1
+            echo "### gradle";       ./gradlew --version
+            echo "### source files"; find shared-ios/shared/src -name '*.kt' | wc -l
+            echo "### copied from";  sed -n '1,26p' shared-ios/SOURCE.md
+          } 2>&1 | tee logs/00-toolchain.txt
 
       # ------------------------------------------------------------------
       # Three separate steps, so a failure in one still leaves the others'
@@ -130,20 +117,18 @@ jobs:
       - name: "Compile :shared for iosSimulatorArm64"
         id: compile
         continue-on-error: true
-        working-directory: prime-notes
         run: |
           set -o pipefail
-          ./gradlew :shared:compileKotlinIosSimulatorArm64 \
-            --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/logs/10-compile.txt"
+          ./gradlew -p shared-ios :shared:compileKotlinIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee logs/10-compile.txt
 
       - name: "Link the Shared framework"
         id: link
         continue-on-error: true
-        working-directory: prime-notes
         run: |
           set -o pipefail
-          ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 \
-            --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/logs/20-link.txt"
+          ./gradlew -p shared-ios :shared:linkDebugFrameworkIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee logs/20-link.txt
 
       # The strongest evidence this workflow produces: the same commonTest suite that runs on the
       # Android host, run again on the iOS simulator. That is what actually exercises the
@@ -152,42 +137,40 @@ jobs:
       - name: "Run :shared's commonTest suite on the iOS simulator"
         id: test
         continue-on-error: true
-        working-directory: prime-notes
         run: |
           set -o pipefail
-          ./gradlew :shared:iosSimulatorArm64Test \
-            --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/logs/30-tests.txt"
+          ./gradlew -p shared-ios :shared:iosSimulatorArm64Test \
+            --stacktrace 2>&1 | tee logs/30-tests.txt
 
       - name: Inspect the linked framework
         continue-on-error: true
         run: |
           set -o pipefail
-          mkdir -p "$GITHUB_WORKSPACE/logs"
+          mkdir -p logs
           {
-            find prime-notes/shared/build/bin -maxdepth 4 -type d -name '*.framework' 2>/dev/null
-            find prime-notes/shared/build/bin -maxdepth 6 -type f -name 'Shared' \
+            find shared-ios/shared/build/bin -maxdepth 4 -type d -name '*.framework' 2>/dev/null
+            find shared-ios/shared/build/bin -maxdepth 6 -type f -name 'Shared' \
               -exec ls -l {} \; 2>/dev/null
-          } | tee "$GITHUB_WORKSPACE/logs/40-framework.txt"
+          } | tee logs/40-framework.txt
 
       - name: Collect test results
         if: always()
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/logs/test-results"
-          find prime-notes -path '*/build/test-results/*' -name '*.xml' \
-            -exec cp {} "$GITHUB_WORKSPACE/logs/test-results/" \; 2>/dev/null || true
-          ls -l "$GITHUB_WORKSPACE/logs/test-results" || true
+          mkdir -p logs/test-results
+          find shared-ios -path '*/build/test-results/*' -name '*.xml' \
+            -exec cp {} logs/test-results/ \; 2>/dev/null || true
+          ls -l logs/test-results || true
 
       - name: Record verdict for this run
         if: always()
         run: |
           {
-            echo "ref=${{ inputs.ref || 'main' }}"
-            echo "sha=$(git -C prime-notes rev-parse HEAD 2>/dev/null || echo unknown)"
+            echo "sha=$(git rev-parse HEAD 2>/dev/null || echo unknown)"
             echo "compileKotlinIosSimulatorArm64=${{ steps.compile.outcome }}"
             echo "linkDebugFrameworkIosSimulatorArm64=${{ steps.link.outcome }}"
             echo "iosSimulatorArm64Test=${{ steps.test.outcome }}"
-          } > "$GITHUB_WORKSPACE/logs/99-verdict.txt"
-          cat "$GITHUB_WORKSPACE/logs/99-verdict.txt"
+          } > logs/99-verdict.txt
+          cat logs/99-verdict.txt
 
       # A red run must look like one. The three steps above carry `continue-on-error` so that a
       # compile failure does not erase the test evidence; this is what puts the failure back.

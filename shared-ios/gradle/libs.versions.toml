@@ -1,0 +1,119 @@
+[versions]
+agp = "9.4.0"
+# AGP 9 has built-in Kotlin, so `:app` no longer applies the kotlin-android plugin — and AGP
+# 9.4.0's own POM depends on kotlin-gradle-plugin 2.2.10. That does NOT pin the Kotlin version:
+# declaring a Kotlin compiler plugin at a newer version (compose, serialization, both below)
+# puts that Kotlin on the build classpath, and Gradle's conflict resolution upgrades AGP's
+# 2.2.10 to it. Verified after the bump by the resolved kotlin-stdlib (2.3.20) and by a green
+# build and test run.
+#
+# 2.3.20 is the floor for this work: the room3 and material3 iOS klibs are published with ABI
+# version 2.3.0, and a 2.2.x compiler refuses to read them.
+kotlin = "2.3.20"
+composeBom = "2026.09.00"
+navigation3 = "1.1.7"
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
+coreKtx = "1.19.0"
+room = "2.8.5"
+work = "2.12.0"
+# Why the oldest of these rather than the newest: androidx.biometric has no current stable
+# release — 1.4.0 is alpha — and its last stable, 1.1.0, is from 2020. A lock prompt that cannot
+# be exercised without a device is the last place to take a chance, so the artifact with the
+# fewest unknowns wins. Revisit when 1.4.0 or 1.5.0 ships stable.
+biometric = "1.1.0"
+fragment = "1.9.1"
+# KSP stopped using the `<kotlin>-<ksp>` scheme after 2.2.21: 2.3.12 is a plain version that
+# serves Kotlin 2.3.20 and 2.4.20 alike. Room 2.8.5's processor still runs under it.
+ksp = "2.3.12"
+coroutines = "1.11.0"
+# The app's own settings — its first stored preference. DataStore rather than
+# SharedPreferences, because that is what Android recommends for this now, and
+# because its API is a Flow, which is the shape the rest of this app already
+# speaks. One file, one instance, created in AppContainer.
+datastore = "1.2.1"
+junit = "4.13.2"
+kotlinxSerialization = "1.7.3"
+robolectric = "4.17"
+androidxTestCore = "1.7.0"
+androidxTestExtJunit = "1.3.0"
+
+# Pinned deliberately, and lower than the newest release, for two independent reasons
+# that were both found by trying:
+#
+#  1. supabase-kt 3.3.0+ is built against Kotlin 2.3/2.4 metadata. When this pin was chosen the
+#     project was on Kotlin 2.2.10, whose compiler cannot read that metadata. It is now on
+#     Kotlin 2.3.20, so the constraint may no longer apply — but the pin has NOT been re-tested
+#     since the Kotlin bump, so it stands until it is.
+#  2. Ktor 3.2.0 cannot be dexed at this project's minSdk. It ships a field named
+#     `use streaming syntax` on io.ktor.client.plugins.Messages, and D8 rejects it
+#     below DEX version 040, which minSdk 26 does not reach (KTOR-8617 / ktor#4961).
+#
+# supabase-kt 3.1.4 is built against Kotlin 2.1.20 and depends on Ktor 3.1.2, so the
+# engine is pinned to that exact version rather than a newer one — zero skew, and
+# neither problem applies. Raising minSdk was never an option: it is a Phase 1 decision.
+supabase = "3.1.4"
+ktor = "3.1.2"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
+
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive" }
+androidx-material3-adaptive-layout = { group = "androidx.compose.material3.adaptive", name = "adaptive-layout" }
+
+androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
+
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+androidx-work-runtime = { group = "androidx.work", name = "work-runtime", version.ref = "work" }
+
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Reaching the biometric prompt. `BiometricPrompt` wants a FragmentActivity, and this app's
+# activity is a plain ComponentActivity, so the fragment artifact comes with it.
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+
+supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
+supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
+supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
+supabase-functions = { group = "io.github.jan-tennert.supabase", name = "functions-kt" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+# The Android target for the multiplatform module. `com.android.library` cannot be combined
+# with the Kotlin Multiplatform plugin from AGP 9 on, so a KMP module gets its Android target
+# from this plugin instead.
+android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }
