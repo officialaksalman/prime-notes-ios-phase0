@@ -5,11 +5,14 @@
 #
 # Why this workflow publishes its own results: no GitHub token or CLI is available to
 # the agent running the spikes, so the run cannot be inspected from outside. Each run
-# therefore commits a RESULTS.md back to the repository, which can be read anonymously
-# over raw.githubusercontent.com.
+# therefore commits a RESULTS.md back to the repository, which can be read over git.
 #
 # Trigger: a push to main (or manual dispatch). Commits made by GITHUB_TOKEN do not
 # re-trigger workflows, so the results commit cannot cause a loop.
+#
+# NOTE ON FAILURE DETECTION: every step that runs gradlew sets `pipefail`. Without it a
+# `gradlew ... | tee log` pipeline reports tee's exit code (0) and a failed build is
+# recorded as a success. That bug already produced a false green run once (run #1).
 
 name: Phase 0 — iOS/KMP verification
 
@@ -40,6 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A copy of gradlew made from Windows loses its executable bit; git then records
+      # mode 100644 and every invocation dies with "Permission denied".
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -49,14 +57,17 @@ jobs:
 
       - name: Apply matrix versions to the version catalog
         run: |
+          set -o pipefail
           f=phase0-ios-verification/gradle/libs.versions.toml
           sed -i '' -E "s/^kotlin = .*/kotlin = \"${{ matrix.kotlin }}\"/" "$f"
           sed -i '' -E "s/^ksp = .*/ksp = \"${{ matrix.ksp }}\"/" "$f"
           echo "--- resolved catalog versions ---"
-          grep -E '^(kotlin|ksp|compose|room|sqlite|agp|ktor|supabase) *= ' "$f"
+          grep -E '^(kotlin|ksp|compose|room|sqlite|agp|ktor|supabase) *= ' "$f" || true
 
       - name: Toolchain report
+        continue-on-error: true
         run: |
+          set -o pipefail
           mkdir -p logs
           {
             echo "### runner";                 sw_vers
@@ -70,6 +81,7 @@ jobs:
       - name: Ensure Android SDK platform 37
         continue-on-error: true
         run: |
+          set -o pipefail
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
           SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
           if [ -x "$SM" ]; then
@@ -93,6 +105,8 @@ jobs:
           PHASE0_TEST_EMAIL: ${{ secrets.PHASE0_TEST_EMAIL }}
           PHASE0_TEST_PASSWORD: ${{ secrets.PHASE0_TEST_PASSWORD }}
         run: |
+          set -euo pipefail
+          mkdir -p logs
           ./gradlew -p phase0-ios-verification iosSimulatorArm64Test \
             --stacktrace --info 2>&1 | tee logs/10-spikeA-and-C.txt
 
@@ -103,6 +117,8 @@ jobs:
         id: spikebios
         continue-on-error: true
         run: |
+          set -euo pipefail
+          mkdir -p logs
           ./gradlew -p phase0-ios-verification linkDebugFrameworkIosSimulatorArm64 \
             --stacktrace 2>&1 | tee logs/20-spikeB-ios-framework.txt
 
@@ -110,18 +126,23 @@ jobs:
         id: spikebandroid
         continue-on-error: true
         run: |
+          set -euo pipefail
+          mkdir -p logs
           ./gradlew -p phase0-ios-verification assembleDebug \
             --stacktrace 2>&1 | tee logs/21-spikeB-android.txt
 
       - name: Resolved dependency report
         continue-on-error: true
         run: |
+          set -o pipefail
+          mkdir -p logs
           ./gradlew -p phase0-ios-verification dependencies \
             2>&1 | tee logs/30-dependencies.txt
 
       - name: Record verdict for this matrix leg
         if: always()
         run: |
+          mkdir -p logs
           {
             echo "kotlin=${{ matrix.kotlin }}"
             echo "ksp=${{ matrix.ksp }}"
