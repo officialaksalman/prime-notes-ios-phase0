@@ -93,9 +93,12 @@ afterEvaluate {
 }
 
 /*
- * NOTE: there is no `room { schemaDirectory(...) }` block here. The `androidx.room3` Gradle
- * plugin does not expose a `room` extension (the `androidx.room` one did), so referring to it
- * is a build-script compile error. The spike does not need exported schemas — it uses a
- * hand-written Migration rather than auto-migrations — so schema export is disabled on the
- * @Database declarations in Data.kt instead.
+ * The extension is named `room3`, NOT `room`. The official KMP page shows `room { ... }`,
+ * but the androidx.room3 Gradle plugin registers its RoomExtension under "room3" — verified
+ * by reading the string constants out of room3-gradle-plugin-3.1.0-alpha01.jar. Using `room`
+ * is a build-script compile error, and omitting it fails task creation with
+ * "No matching Room schema directory for the KSP target ...".
  */
+room3 {
+    schemaDirectory("$projectDir/schemas")
+}
