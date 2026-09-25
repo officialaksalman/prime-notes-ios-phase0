@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class ImportPlanTest {
 
     @Test
-    fun `a note this device has never seen is added, with its folder and tags`() {
+    fun `a note this device has never seen is added with its folder and tags`() {
         val plan = plan(incoming = file())
 
         assertEquals(listOf("n2"), plan.notes.map { note -> note.id })
@@ -83,7 +83,7 @@ class ImportPlanTest {
     }
 
     @Test
-    fun `a folder is matched by name before id, so its notes follow it`() {
+    fun `a folder is matched by name before id so its notes follow it`() {
         val plan = plan(
             incoming = file(
                 folders = listOf(ArchivedFolder("incoming-folder", "work", 1L, 2L)),

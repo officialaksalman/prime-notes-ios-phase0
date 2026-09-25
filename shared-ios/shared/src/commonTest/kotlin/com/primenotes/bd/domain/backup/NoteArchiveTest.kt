@@ -149,13 +149,13 @@ class NoteArchiveTest {
     @Test
     fun `a file that is not one of ours is refused`() {
         assertFailsWith<ArchiveFormatException> {
-            NoteArchive.decode("not a zip at all".toByteArray())
+            NoteArchive.decode("not a zip at all".encodeToByteArray())
         }
 
         assertFailsWith<ArchiveFormatException> {
             NoteArchive.decode(
                 codec.zip(
-                    listOf(ArchiveEntry(name = "holiday-photo.jpg", bytes = "not ours".toByteArray()))
+                    listOf(ArchiveEntry(name = "holiday-photo.jpg", bytes = "not ours".encodeToByteArray()))
                 )
             )
         }

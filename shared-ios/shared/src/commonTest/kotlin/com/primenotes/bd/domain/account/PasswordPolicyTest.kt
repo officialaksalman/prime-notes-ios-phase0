@@ -56,7 +56,7 @@ class PasswordPolicyTest {
     }
 
     @Test
-    fun `short but varied is fair, and long and varied is strong`() {
+    fun `short but varied is fair and long and varied is strong`() {
         assertEquals(PasswordStrength.FAIR, PasswordPolicy.strengthOf("Password1"))
         assertEquals(PasswordStrength.FAIR, PasswordPolicy.strengthOf("Tr0ub4dor"))
         assertEquals(PasswordStrength.STRONG, PasswordPolicy.strengthOf("Password1!xyz"))
