@@ -66,6 +66,24 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # Kotlin/Native 2.3.20+ expects a newer Xcode than this image's default. Without a
+      # matching toolchain the test executable fails to link with:
+      #   ld: library 'swiftCompatibility51' not found
+      #   ld: search path '/Applications/Xcode_26.4.app/.../usr/lib/swift/iphonesimulator' not found
+      - name: Select the newest available Xcode
+        run: |
+          echo "--- Xcode installations present ---"
+          ls -d /Applications/Xcode*.app 2>/dev/null || echo "(none)"
+          echo "current DEVELOPER_DIR=${DEVELOPER_DIR:-unset}"
+          NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$NEWEST" ]; then
+            sudo xcode-select -s "$NEWEST" || true
+            echo "DEVELOPER_DIR=$NEWEST" >> "$GITHUB_ENV"
+          fi
+          echo "--- selected ---"
+          xcode-select -p
+          xcodebuild -version
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

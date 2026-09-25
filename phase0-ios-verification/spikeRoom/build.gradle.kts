@@ -36,23 +36,27 @@ kotlin {
 }
 
 /*
- * Configuration names are DISCOVERED rather than assumed, and reported, so a missing
- * processor is a clear finding rather than a stack trace.
+ * Room's processor must run for every target, or the generated `actual` database
+ * implementations are missing and compilation fails with
+ *   "Expected Phase0DatabaseConstructor has no actual declaration in module <commonMain> for Native".
+ *
+ * These MUST be added here, at the top level. Adding them inside afterEvaluate is too late:
+ * KSP has already configured its tasks and silently generates nothing, which is exactly what
+ * the first attempt did. The names were confirmed by a discovery run (there is no kspAndroid
+ * under AGP 9's KMP plugin, but the three iOS ones exist).
  */
+dependencies {
+    add("kspIosX64", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
+}
+
+/** Reported for the record, so the Phase 0 findings show what KSP actually offered. */
 afterEvaluate {
-    val wanted = listOf("kspIosX64", "kspIosArm64", "kspIosSimulatorArm64")
-
-    val present = configurations.names.filter { it.startsWith("ksp") }.sorted()
-    println("PHASE0-KSP configurations present: $present")
-
-    wanted.forEach { name ->
-        if (configurations.findByName(name) != null) {
-            dependencies.add(name, libs.room.compiler)
-            println("PHASE0-KSP wired: $name")
-        } else {
-            println("PHASE0-KSP MISSING: $name")
-        }
-    }
+    println(
+        "PHASE0-KSP configurations present: " +
+            configurations.names.filter { it.startsWith("ksp") }.sorted()
+    )
 }
 
 /*
