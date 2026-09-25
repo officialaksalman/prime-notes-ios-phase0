@@ -1,4 +1,4 @@
-package phase0
+package phase0.uicloud
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -14,9 +14,8 @@ import kotlinx.serialization.json.JsonObject
  * Spike C. Uses the *existing* Prime Notes backend and the *existing* client libraries —
  * no second backend, no schema change, no RLS change.
  *
- * This mirrors data/cloud/SupabaseCloudProbe.kt's client construction, with one difference:
- * the HTTP engine is supplied by the platform (OkHttp on Android, Darwin on iOS) via the
- * Ktor engine that is on each platform's classpath.
+ * Mirrors data/cloud/SupabaseCloudProbe.kt's client construction; the only difference is
+ * that the HTTP engine comes from each platform's Ktor artifact (OkHttp / Darwin).
  */
 fun phase0CloudClient(supabaseUrl: String, publishableKey: String): SupabaseClient =
     createSupabaseClient(
@@ -35,8 +34,8 @@ suspend fun phase0SignIn(client: SupabaseClient, email: String, password: String
 }
 
 /**
- * A read the publishable key is allowed to make. Being *denied* by row-level security is
- * not a failure here — it proves the boundary holds. Returning rows would be the alarm.
+ * A read the publishable key is allowed to attempt. Being *denied* by row-level security is
+ * not a failure — it proves the boundary holds. Returning rows would be the alarm.
  */
 suspend fun phase0ProbeRead(client: SupabaseClient): Int =
     client.postgrest

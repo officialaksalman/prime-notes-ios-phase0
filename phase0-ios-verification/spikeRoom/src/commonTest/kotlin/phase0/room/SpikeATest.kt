@@ -1,4 +1,4 @@
-package phase0
+package phase0.room
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -10,12 +10,12 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 
 /**
- * Spike A. Answers the one question that decides the database approach:
+ * Spike A. Answers the question that decides the database approach:
  *
  *   Can the SQLite the app would ship on iOS create, populate and query the
  *   external-content FTS4 index that Prime Notes' schema contains?
  *
- * Each check is its own @Test so a failure in one does not hide the others.
+ * Each check is its own @Test so one failure does not hide the others.
  */
 class SpikeATest {
 
@@ -38,17 +38,6 @@ class SpikeATest {
             block(connection)
         } finally {
             connection.close()
-        }
-    }
-
-    private fun rawQuery(sql: String): List<String> = withRawConnection { connection ->
-        val statement = connection.prepare(sql)
-        try {
-            buildList {
-                while (statement.step()) add(statement.getText(0))
-            }
-        } finally {
-            statement.close()
         }
     }
 
@@ -113,7 +102,7 @@ class SpikeATest {
         val path = phase0TempPath("phase0-room-${Random.nextLong()}.db")
         val database = openV2(path)
         try {
-            // Nothing is written to notes_fts by the test: if the search finds this row,
+            // Nothing is written to notes_fts by the test: if the search finds these rows,
             // Room's generated sync triggers did it.
             database.noteDao().insert(NoteEntity("a", "Oat milk", "buy oat milk and bread", 1L, 1L))
             database.noteDao().insert(NoteEntity("b", "Groceries", "bread and cheese", 2L, 1L))

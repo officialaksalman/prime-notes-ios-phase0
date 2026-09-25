@@ -1,4 +1,4 @@
-package phase0
+package phase0.room
 
 import androidx.room3.ColumnInfo
 import androidx.room3.Dao
@@ -16,14 +16,12 @@ import androidx.sqlite.execSQL
 
 /*
  * Spike A. The shape of the production `notes` table + its external-content FTS4 index,
- * reduced to the parts that matter for the iOS question.
+ * reduced to the parts that matter for the iOS question. NOT production code.
  *
- * NOT production code and NOT wired into the app.
- *
- * The production definitions this mirrors:
+ * Mirrors:
  *   data/local/entity/NoteEntity.kt      (String primary key, soft delete, revision)
  *   data/local/entity/NoteFtsEntity.kt   (@Fts4(contentEntity = NoteEntity::class))
- *   data/local/PrimeNotesMigrations.kt   (CREATE_VIRTUAL_TABLE ... USING FTS4(..., content=`notes`))
+ *   data/local/PrimeNotesMigrations.kt   (CREATE VIRTUAL TABLE ... USING FTS4(..., content=`notes`))
  */
 
 @Entity(tableName = "notes")

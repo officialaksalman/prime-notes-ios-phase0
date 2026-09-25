@@ -1,9 +1,12 @@
 /*
- * Phase 0 spike — deliberately a SEPARATE Gradle build.
+ * Phase 0 spike build — deliberately a SEPARATE Gradle build.
  *
- * It is NOT included by the root settings.gradle.kts, so the production Android
- * build does not know this directory exists and cannot be affected by it.
- * Run it with:  ./gradlew -p phase0-ios-verification <task>
+ * Not included by the production settings.gradle.kts, so the Android app cannot be
+ * affected by anything here. Run with:
+ *   ./gradlew -p phase0-ios-verification <task>
+ *
+ * Two modules, on purpose: a Room/ksp failure must not prevent Compose Multiplatform
+ * and Supabase from being verified. They share nothing but the version catalog.
  */
 pluginManagement {
     repositories {
@@ -21,3 +24,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "prime-notes-phase0"
+
+include(":spikeRoom")
+include(":spikeUiCloud")

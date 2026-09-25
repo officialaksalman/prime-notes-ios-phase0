@@ -1,4 +1,4 @@
-package phase0
+package phase0.uicloud
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
  * Spike B. The smallest screen that still proves something: shared UI code, real state,
  * real Material 3, and a real control.
  *
- * This is deliberately NOT any Prime Notes screen — the production UI is untouched.
+ * Deliberately NOT any Prime Notes screen — the production UI is untouched.
  */
 @Composable
 fun Phase0SpikeScreen() {

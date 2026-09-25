@@ -1,18 +1,22 @@
 # Phase 0 — iOS / KMP verification (sandbox only)
 #
-# Runs the macOS-only Phase 0 spikes. This repository is a dedicated sandbox:
-# it contains no production Prime Notes code and never touches the production repo.
+# Runs the macOS-only Phase 0 spikes. This repository is a dedicated sandbox: it contains
+# no production Prime Notes code and never touches the production repository.
 #
-# Why this workflow publishes its own results: no GitHub token or CLI is available to
-# the agent running the spikes, so the run cannot be inspected from outside. Each run
-# therefore commits a RESULTS.md back to the repository, which can be read over git.
+# Why it publishes its own results: no GitHub token or CLI is available to the agent
+# driving these runs, so a run cannot be inspected from outside. Each run commits a
+# RESULTS.md back to the repository, which is then read over git.
 #
 # Trigger: a push to main (or manual dispatch). Commits made by GITHUB_TOKEN do not
 # re-trigger workflows, so the results commit cannot cause a loop.
 #
-# NOTE ON FAILURE DETECTION: every step that runs gradlew sets `pipefail`. Without it a
+# FAILURE DETECTION: every gradlew step sets `pipefail`. Without it a
 # `gradlew ... | tee log` pipeline reports tee's exit code (0) and a failed build is
-# recorded as a success. That bug already produced a false green run once (run #1).
+# recorded as a success — that bug already produced one false green run.
+#
+# DECOUPLING: the two spikes are separate modules and separate steps, so a Room failure
+# (currently blocked by an upstream klib problem) cannot hide the Compose Multiplatform
+# and Supabase results.
 
 name: Phase 0 — iOS/KMP verification
 
@@ -32,19 +36,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Two Compose Multiplatform lines, because material3 has no iOS artifact before
-        # 1.11.0-alpha01 and 1.12.0-alpha03's klib is unreadable. Reported independently.
+        # Kotlin is the variable under test: room3 3.1.0-alpha01 is built against Kotlin
+        # 2.1.20, and whether a newer Kotlin Gradle plugin can read its iOS klib metadata
+        # is unknown. KSP is pinned per leg from the published KSP version list.
+        # Everything in `include` only: mixing `include` with other axes would add an extra
+        # combination that has none of the include keys set.
         include:
           - kotlin: "2.2.20"
             ksp: "2.2.20-2.0.4"
             compose: "1.12.1"
             material3: "1.13.0-alpha01"
-            label: cmp-1.12.1_m3-1.13.0-alpha01
-          - kotlin: "2.2.20"
-            ksp: "2.2.20-2.0.4"
-            compose: "1.11.1"
-            material3: "1.11.0-alpha07"
-            label: cmp-1.11.1_m3-1.11.0-alpha07
+            label: kotlin-2.2.20
+          - kotlin: "2.3.20"
+            ksp: "2.3.12"
+            compose: "1.12.1"
+            material3: "1.13.0-alpha01"
+            label: kotlin-2.3.20
+          - kotlin: "2.4.20"
+            ksp: "2.3.12"
+            compose: "1.12.1"
+            material3: "1.13.0-alpha01"
+            label: kotlin-2.4.20
 
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +85,7 @@ jobs:
           sed -i '' -E "s/^composeVersion = .*/composeVersion = \"${{ matrix.compose }}\"/" "$f"
           sed -i '' -E "s/^composeMaterial3Version = .*/composeMaterial3Version = \"${{ matrix.material3 }}\"/" "$f"
           echo "--- resolved catalog versions ---"
-          grep -E '^(kotlinVersion|kspVersion|composeVersion|composeMaterial3Version|roomVersion|sqliteVersion|agpVersion|ktorVersion|supabaseVersion) =' "$f" || true
+          grep -E '^(kotlinVersion|kspVersion|composeVersion|composeMaterial3Version|roomVersion|sqliteVersion|ktorVersion|supabaseVersion) =' "$f" || true
           echo "--- plugin declarations must still be intact ---"
           grep -E '^ksp = |^room = |^composeMultiplatform = ' "$f" || true
 
@@ -86,31 +98,16 @@ jobs:
             echo "### runner";                 sw_vers
             echo "### xcode";                  xcodebuild -version
             echo "### java";                   java -version 2>&1
-            echo "### gradle";                 ./gradlew --version
-            echo "### simulators (available)"; xcrun simctl list devices available | head -40
-            echo "### android sdk";            echo "ANDROID_HOME=${ANDROID_HOME:-unset} ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
+            echo "### gradle";                 ./gradlew -p phase0-ios-verification --version
+            echo "### simulators (available)"; xcrun simctl list devices available | head -25
           } 2>&1 | tee logs/00-toolchain.txt
 
-      - name: Ensure Android SDK platform 37
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
-          SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
-          if [ -x "$SM" ]; then
-            yes | "$SM" --licenses >/dev/null 2>&1 || true
-            "$SM" "platforms;android-37" "build-tools;37.0.0" || true
-          else
-            echo "sdkmanager not found at $SM"
-          fi
-
       # ------------------------------------------------------------------
-      # Spike A + C: Room KMP / FTS4 / migration, and Supabase on iOS.
-      # iosSimulatorArm64Test runs the Kotlin/Native test binary ON the simulator,
-      # which is what makes the FTS4 answer a genuine simulator result.
+      # Spike B + C: Compose Multiplatform and Supabase. No Room, no KSP, so these
+      # results are independent of the Room blocker.
       # ------------------------------------------------------------------
-      - name: "Spike A + C — iOS simulator tests"
-        id: spiketests
+      - name: "Spike C — Supabase/Darwin + Compose on the iOS simulator"
+        id: uicloudtest
         continue-on-error: true
         env:
           PHASE0_SUPABASE_URL: ${{ secrets.PHASE0_SUPABASE_URL }}
@@ -120,48 +117,36 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p logs
-          ./gradlew -p phase0-ios-verification iosSimulatorArm64Test \
-            --stacktrace --info 2>&1 | tee logs/10-spikeA-and-C.txt
+          ./gradlew -p phase0-ios-verification :spikeUiCloud:iosSimulatorArm64Test \
+            --stacktrace --info 2>&1 | tee logs/10-spikeC-uicloud-tests.txt
 
-      # ------------------------------------------------------------------
-      # Spike B: the same shared UI must build for iOS and for Android.
-      # ------------------------------------------------------------------
-      - name: "Spike B — link CMP iOS framework"
-        id: spikebios
+      - name: "Spike B — link the Compose Multiplatform iOS framework"
+        id: uicloudframework
         continue-on-error: true
         run: |
           set -euo pipefail
           mkdir -p logs
-          ./gradlew -p phase0-ios-verification linkDebugFrameworkIosSimulatorArm64 \
+          ./gradlew -p phase0-ios-verification :spikeUiCloud:linkDebugFrameworkIosSimulatorArm64 \
             --stacktrace 2>&1 | tee logs/20-spikeB-ios-framework.txt
 
-      - name: "Spike B — list available tasks (diagnostic)"
+      # ------------------------------------------------------------------
+      # Spike A: Room KMP + FTS4 + migration. Separate step and module.
+      # ------------------------------------------------------------------
+      - name: "Spike A — Room KMP / FTS4 on the iOS simulator"
+        id: roomtest
         continue-on-error: true
         run: |
-          set -o pipefail
+          set -euo pipefail
           mkdir -p logs
-          ./gradlew -p phase0-ios-verification tasks --all 2>&1 | tee logs/22-tasks.txt
-
-      - name: "Android target — intentionally ABSENT in this spike (see build.gradle.kts)"
-        run: |
-          mkdir -p logs
-          {
-            echo "The Android target is deliberately NOT part of this spike. Measured reasons:"
-            echo "  1. AGP 9 rejects com.android.library together with the Kotlin Multiplatform plugin."
-            echo "  2. Its replacement, com.android.kotlin.multiplatform.library, creates no"
-            echo "     kspAndroid configuration, and KSP then fails with a ClassCastException"
-            echo "     (KotlinMultiplatformAndroidCompilationImpl -> KotlinJvmAndroidCompilation)."
-            echo "  3. Room needs KSP, so a shared module with an Android target cannot use Room today."
-            echo "Android health is verified by the production build, not by this module."
-          } | tee logs/21-spikeB-android.txt
+          ./gradlew -p phase0-ios-verification :spikeRoom:iosSimulatorArm64Test \
+            --stacktrace --info 2>&1 | tee logs/30-spikeA-room-tests.txt
 
       - name: Resolved dependency report
         continue-on-error: true
         run: |
           set -o pipefail
           mkdir -p logs
-          ./gradlew -p phase0-ios-verification dependencies \
-            2>&1 | tee logs/30-dependencies.txt
+          ./gradlew -p phase0-ios-verification dependencies 2>&1 | tee logs/40-dependencies.txt || true
 
       - name: Record verdict for this matrix leg
         if: always()
@@ -170,9 +155,11 @@ jobs:
           {
             echo "kotlin=${{ matrix.kotlin }}"
             echo "ksp=${{ matrix.ksp }}"
-            echo "spikeA_and_C=${{ steps.spiketests.outcome }}"
-            echo "spikeB_ios_framework=${{ steps.spikebios.outcome }}"
-            echo "android_target=ABSENT (AGP9+KSP incompatible; see 21-spikeB-android.txt)"
+            echo "compose=${{ matrix.compose }}"
+            echo "material3=${{ matrix.material3 }}"
+            echo "spikeA_room=${{ steps.roomtest.outcome }}"
+            echo "spikeB_cmp_ios_framework=${{ steps.uicloudframework.outcome }}"
+            echo "spikeC_supabase_ios=${{ steps.uicloudtest.outcome }}"
             echo "job_status=${{ job.status }}"
           } > logs/99-verdict.txt
           cat logs/99-verdict.txt
@@ -219,6 +206,7 @@ jobs:
             echo '```' >> RESULTS.md
             for f in "$d"/*.txt; do
               [ "$(basename "$f")" = "99-verdict.txt" ] && continue
+              [ "$(basename "$f")" = "40-dependencies.txt" ] && continue
               echo "### $(basename "$f")" >> RESULTS.md
               echo '```' >> RESULTS.md
               tail -c 30000 "$f" >> RESULTS.md

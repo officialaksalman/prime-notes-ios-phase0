@@ -1,4 +1,4 @@
-package phase0
+package phase0.uicloud
 
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -9,11 +9,28 @@ import kotlinx.coroutines.test.runTest
  * Spike C. Proves the *existing* backend can be reached from a Ktor Darwin client on iOS.
  *
  * Credentials come from the environment (GitHub Secrets in CI). When they are absent the
- * test SKIPS and says so, rather than pretending to have verified anything.
- *
- * Nothing here creates a backend, changes the schema, or touches RLS.
+ * credential-dependent test SKIPS and says so, rather than pretending to have verified
+ * anything. Nothing here creates a backend, changes the schema, or touches RLS.
  */
 class SpikeCTest {
+
+    /**
+     * Needs NO credentials, so it always runs. It proves supabase-kt constructs on iOS with
+     * the Ktor Darwin engine actually linked in — a linkage problem would surface here.
+     *
+     * The key is a structurally valid but unsigned JWT, because the client decodes the key's
+     * payload to decide how to send it.
+     */
+    @Test
+    fun supabaseClientInitializesOnIos() {
+        val placeholderKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+            "eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMDAwMDAwMDB9." +
+            "c2lnbmF0dXJl"
+
+        val client = phase0CloudClient("https://phase0-placeholder.supabase.co", placeholderKey)
+        assertFalse(phase0HasSession(client), "a fresh client should start with no session")
+        println("PHASE0 SPIKE C: Supabase client constructed on iOS with the Darwin engine OK")
+    }
 
     @Test
     fun signInPostgrestReadAndSessionRestore() = runTest {
@@ -42,28 +59,9 @@ class SpikeCTest {
                 visible.fold({ "$it row(s)" }, { "denied (${it.message}) — RLS holding" })
         )
 
-        // "Relaunch": a second client over the same session store. If the session is restored
-        // without signing in again, persistence works the way the app needs it to.
+        // "Relaunch": a second client over the same session store.
         val relaunched = phase0CloudClient(url, key)
         assertTrue(phase0HasSession(relaunched), "the session did not survive a fresh client")
         println("PHASE0 SPIKE C: session restored on a fresh client OK")
-    }
-
-    /**
-     * Needs NO credentials, so it always runs. It proves supabase-kt constructs on iOS with
-     * the Ktor Darwin engine actually linked in — a linkage problem would surface here.
-     *
-     * The key is a structurally valid but unsigned JWT, because the client decodes the key's
-     * payload to decide how to send it.
-     */
-    @Test
-    fun supabaseClientInitializesOnIos() {
-        val placeholderKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-            "eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMDAwMDAwMDB9." +
-            "c2lnbmF0dXJl"
-
-        val client = phase0CloudClient("https://phase0-placeholder.supabase.co", placeholderKey)
-        assertFalse(phase0HasSession(client), "a fresh client should start with no session")
-        println("PHASE0 SPIKE C: Supabase client constructed on iOS with the Darwin engine OK")
     }
 }
