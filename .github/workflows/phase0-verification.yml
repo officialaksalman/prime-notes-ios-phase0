@@ -32,13 +32,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Leg 1 is the conservative combination; leg 2 the one the migration would
+        # actually want. Reported independently so one failing leg still yields data.
         include:
           - kotlin: "2.2.10"
             ksp: "2.2.10-2.0.2"
-            label: kotlin-2.2.10-as-production
+            compose: "1.9.3"
+            material3: "1.9.0"
+            label: prod-kotlin-2.2.10_stable-cmp-1.9.3
           - kotlin: "2.2.20"
             ksp: "2.2.20-2.0.4"
-            label: kotlin-2.2.20-cmp-recommended
+            compose: "1.12.1"
+            material3: "1.12.0-alpha03"
+            label: cmp-recommended-kotlin-2.2.20_cmp-1.12.1
 
     steps:
       - uses: actions/checkout@v4
@@ -64,10 +70,12 @@ jobs:
           # and rewrites the plugin declaration into a bare string.
           sed -i '' -E "s/^kotlinVersion = .*/kotlinVersion = \"${{ matrix.kotlin }}\"/" "$f"
           sed -i '' -E "s/^kspVersion = .*/kspVersion = \"${{ matrix.ksp }}\"/" "$f"
+          sed -i '' -E "s/^composeVersion = .*/composeVersion = \"${{ matrix.compose }}\"/" "$f"
+          sed -i '' -E "s/^composeMaterial3Version = .*/composeMaterial3Version = \"${{ matrix.material3 }}\"/" "$f"
           echo "--- resolved catalog versions ---"
-          grep -E '^(kotlinVersion|kspVersion|composeVersion|roomVersion|sqliteVersion|agpVersion|ktorVersion|supabaseVersion) =' "$f" || true
+          grep -E '^(kotlinVersion|kspVersion|composeVersion|composeMaterial3Version|roomVersion|sqliteVersion|agpVersion|ktorVersion|supabaseVersion) =' "$f" || true
           echo "--- plugin declarations must still be intact ---"
-          grep -E '^ksp = |^room = ' "$f" || true
+          grep -E '^ksp = |^room = |^composeMultiplatform = ' "$f" || true
 
       - name: Toolchain report
         continue-on-error: true

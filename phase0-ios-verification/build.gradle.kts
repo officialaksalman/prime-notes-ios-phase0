@@ -49,14 +49,14 @@ kotlin {
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
 
-            // Spike B — Compose Multiplatform.
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
+            // Spike B — Compose Multiplatform, declared as direct artifacts because
+            // CMP 1.10+ deprecates the `compose.*` DSL accessors at error level.
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.material3)
+            implementation(libs.compose.ui)
 
             // Spike C — Supabase over Ktor (engine supplied per platform).
-            implementation(platform(libs.supabase.bom))
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.auth)
             implementation(libs.ktor.client.core)
