@@ -1,0 +1,194 @@
+# Phase 0 — iOS / KMP verification (sandbox only)
+#
+# Runs the macOS-only Phase 0 spikes. This repository is a dedicated sandbox:
+# it contains no production Prime Notes code and never touches the production repo.
+#
+# Why this workflow publishes its own results: no GitHub token or CLI is available to
+# the agent running the spikes, so the run cannot be inspected from outside. Each run
+# therefore commits a RESULTS.md back to the repository, which can be read anonymously
+# over raw.githubusercontent.com.
+#
+# Trigger: a push to main (or manual dispatch). Commits made by GITHUB_TOKEN do not
+# re-trigger workflows, so the results commit cannot cause a loop.
+
+name: Phase 0 — iOS/KMP verification
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: verify (${{ matrix.label }})
+    runs-on: macos-15
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kotlin: "2.2.10"
+            ksp: "2.2.10-2.0.2"
+            label: kotlin-2.2.10-as-production
+          - kotlin: "2.2.20"
+            ksp: "2.2.20-2.0.4"
+            label: kotlin-2.2.20-cmp-recommended
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Apply matrix versions to the version catalog
+        run: |
+          f=phase0-ios-verification/gradle/libs.versions.toml
+          sed -i '' -E "s/^kotlin = .*/kotlin = \"${{ matrix.kotlin }}\"/" "$f"
+          sed -i '' -E "s/^ksp = .*/ksp = \"${{ matrix.ksp }}\"/" "$f"
+          echo "--- resolved catalog versions ---"
+          grep -E '^(kotlin|ksp|compose|room|sqlite|agp|ktor|supabase) *= ' "$f"
+
+      - name: Toolchain report
+        run: |
+          mkdir -p logs
+          {
+            echo "### runner";                 sw_vers
+            echo "### xcode";                  xcodebuild -version
+            echo "### java";                   java -version 2>&1
+            echo "### gradle";                 ./gradlew --version
+            echo "### simulators (available)"; xcrun simctl list devices available | head -40
+            echo "### android sdk";            echo "ANDROID_HOME=${ANDROID_HOME:-unset} ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
+          } 2>&1 | tee logs/00-toolchain.txt
+
+      - name: Ensure Android SDK platform 37
+        continue-on-error: true
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+          SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SM" ]; then
+            yes | "$SM" --licenses >/dev/null 2>&1 || true
+            "$SM" "platforms;android-37" "build-tools;37.0.0" || true
+          else
+            echo "sdkmanager not found at $SM"
+          fi
+
+      # ------------------------------------------------------------------
+      # Spike A + C: Room KMP / FTS4 / migration, and Supabase on iOS.
+      # iosSimulatorArm64Test runs the Kotlin/Native test binary ON the simulator,
+      # which is what makes the FTS4 answer a genuine simulator result.
+      # ------------------------------------------------------------------
+      - name: "Spike A + C — iOS simulator tests"
+        id: spiketests
+        continue-on-error: true
+        env:
+          PHASE0_SUPABASE_URL: ${{ secrets.PHASE0_SUPABASE_URL }}
+          PHASE0_SUPABASE_ANON_KEY: ${{ secrets.PHASE0_SUPABASE_ANON_KEY }}
+          PHASE0_TEST_EMAIL: ${{ secrets.PHASE0_TEST_EMAIL }}
+          PHASE0_TEST_PASSWORD: ${{ secrets.PHASE0_TEST_PASSWORD }}
+        run: |
+          ./gradlew -p phase0-ios-verification iosSimulatorArm64Test \
+            --stacktrace --info 2>&1 | tee logs/10-spikeA-and-C.txt
+
+      # ------------------------------------------------------------------
+      # Spike B: the same shared UI must build for iOS and for Android.
+      # ------------------------------------------------------------------
+      - name: "Spike B — link CMP iOS framework"
+        id: spikebios
+        continue-on-error: true
+        run: |
+          ./gradlew -p phase0-ios-verification linkDebugFrameworkIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee logs/20-spikeB-ios-framework.txt
+
+      - name: "Spike B — build shared UI for Android"
+        id: spikebandroid
+        continue-on-error: true
+        run: |
+          ./gradlew -p phase0-ios-verification assembleDebug \
+            --stacktrace 2>&1 | tee logs/21-spikeB-android.txt
+
+      - name: Resolved dependency report
+        continue-on-error: true
+        run: |
+          ./gradlew -p phase0-ios-verification dependencies \
+            2>&1 | tee logs/30-dependencies.txt
+
+      - name: Record verdict for this matrix leg
+        if: always()
+        run: |
+          {
+            echo "kotlin=${{ matrix.kotlin }}"
+            echo "ksp=${{ matrix.ksp }}"
+            echo "spikeA_and_C=${{ steps.spiketests.outcome }}"
+            echo "spikeB_ios_framework=${{ steps.spikebios.outcome }}"
+            echo "spikeB_android=${{ steps.spikebandroid.outcome }}"
+            echo "job_status=${{ job.status }}"
+          } > logs/99-verdict.txt
+          cat logs/99-verdict.txt
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-logs-${{ matrix.label }}
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 30
+
+  publish:
+    name: publish results
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all spike logs
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Build RESULTS.md
+        run: |
+          {
+            echo "# Phase 0 — verified results"
+            echo
+            echo "Generated by run [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) on \`macos-15\`."
+            echo
+            echo "Commit: \`${{ github.sha }}\`"
+            echo
+          } > RESULTS.md
+
+          shopt -s nullglob
+          for d in artifacts/*/; do
+            name=$(basename "$d")
+            echo "## leg: $name" >> RESULTS.md
+            echo '```' >> RESULTS.md
+            [ -f "$d/99-verdict.txt" ] && cat "$d/99-verdict.txt" >> RESULTS.md
+            echo '```' >> RESULTS.md
+            for f in "$d"/*.txt; do
+              [ "$(basename "$f")" = "99-verdict.txt" ] && continue
+              echo "### $(basename "$f")" >> RESULTS.md
+              echo '```' >> RESULTS.md
+              tail -c 30000 "$f" >> RESULTS.md
+              echo '```' >> RESULTS.md
+            done
+          done
+
+      - name: Commit results
+        run: |
+          git config user.name "phase0-bot"
+          git config user.email "phase0-bot@users.noreply.github.com"
+          git add RESULTS.md
+          if git diff --cached --quiet; then
+            echo "no changes to RESULTS.md"
+          else
+            git commit -m "Phase 0 results for ${{ github.sha }} [skip ci]"
+            git push
+          fi
