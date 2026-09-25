@@ -1,12 +1,12 @@
 # :shared — iOS verification
 
-Run [36199541222](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36199541222) on `macos-15`.
+Run [36200470046](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36200470046) on `macos-15`.
 
-Sandbox commit: `8637056c874ef4490983a69cb208c1c9cd9b4f53`
+Sandbox commit: `a036dbe94fffc783ce44f1bff7dbe8c560c6adc5`
 
 ## shared-ios-logs
 ```
-sha=8637056c874ef4490983a69cb208c1c9cd9b4f53
+sha=a036dbe94fffc783ce44f1bff7dbe8c560c6adc5
 compileKotlinIosSimulatorArm64=success
 linkDebugFrameworkIosSimulatorArm64=success
 iosSimulatorArm64Test=failure
@@ -41,7 +41,7 @@ Daemon JVM:    /Users/runner/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.4-101
 OS:            Mac OS X 15.7.9 aarch64
 
 ### source files
-      62
+      65
 ### copied from
 # `shared-ios/` — a copy of the `:shared` module
 
@@ -75,6 +75,7 @@ revision of Prime-Notes. Once 2b is committed, that commit becomes the honest an
 Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :shared:kmpPartiallyResolvedDependenciesChecker
 > Task :shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+
 > Task :shared:downloadKotlinNativeDistribution
 Kotlin/Native bundle directory /Users/runner/.konan/kotlin-native-prebuilt-macos-aarch64-2.3.20 is not empty. Native bundle files will be overwritten.
 Downloading native dependencies (LLVM, sysroot etc). This is a one-time action performed only on the first run of the compiler.
@@ -85,11 +86,11 @@ Downloading dependency https://download.jetbrains.com/kotlin/native/libffi-3.3-1
 Done.
 Extracting dependency: /Users/runner/.konan/dependencies/cache/libffi-3.3-1-macos-arm64.tar.gz into /Users/runner/.konan/dependencies
 
-> Task :shared:compileKotlinIosSimulatorArm64
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790377570550.json
+> Task :shared:compileKotlinIosSimulatorArm64 FROM-CACHE
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790378369242.json
 
-BUILD SUCCESSFUL in 1m 48s
-3 actionable tasks: 3 executed
+BUILD SUCCESSFUL in 27s
+3 actionable tasks: 2 executed, 1 from cache
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
 ### 20-link.txt
@@ -98,11 +99,12 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 > Task :shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :shared:downloadKotlinNativeDistribution UP-TO-DATE
 > Task :shared:compileKotlinIosSimulatorArm64 UP-TO-DATE
+
 > Task :shared:linkDebugFrameworkIosSimulatorArm64
 w: The number of threads 4 is more than the number of processors 3
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790377676900.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790378395698.json
 
-BUILD SUCCESSFUL in 48s
+BUILD SUCCESSFUL in 20s
 4 actionable tasks: 2 executed, 2 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
@@ -149,7 +151,7 @@ fun UByteArray.toByteArray(): ByteArray
 fun ImmutableBlob.toByteArray(startIndex: Int = ..., endIndex: Int = ...): ByteArray:
   Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
 fun ImmutableBlob.toByteArray(startIndex: Int = ..., endIndex: Int = ...): ByteArray
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790377726454.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790378416372.json
 
 FAILURE: Build failed with an exception.
 
@@ -322,11 +324,11 @@ Caused by: org.jetbrains.kotlin.backend.konan.KonanCompilationException: Compila
 	... 30 more
 
 
-BUILD FAILED in 3s
+BUILD FAILED in 2s
 4 actionable tasks: 2 executed, 2 up-to-date
 ```
 ### 40-framework.txt
 ```
 shared-ios/shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework
--rwxr-xr-x  1 runner  staff  8546008 Sep 25 23:08 shared-ios/shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework/Shared
+-rwxr-xr-x  1 runner  staff  8546008 Sep 25 23:20 shared-ios/shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework/Shared
 ```
