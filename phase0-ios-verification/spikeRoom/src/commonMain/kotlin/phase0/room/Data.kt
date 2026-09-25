@@ -78,9 +78,16 @@ const val CREATE_NOTES_FTS =
 /** An external-content FTS table starts empty; this is what fills it from the content table. */
 const val REBUILD_NOTES_FTS = "INSERT INTO notes_fts(notes_fts) VALUES('rebuild')"
 
-/** v1 -> v2 introduces the search index, exactly as the production migration does. */
+/**
+ * v1 -> v2 introduces the search index, exactly as the production migration does.
+ *
+ * NOTE: in androidx.room3 `Migration.migrate` is `suspend` (the androidx.room version it
+ * replaced was not). Overriding it without `suspend` is a compile error:
+ *   "Non-suspend function 'migrate' cannot override suspend function
+ *    'suspend fun migrate(connection: SQLiteConnection)'"
+ */
 val MIGRATION_1_2: Migration = object : Migration(1, 2) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         connection.execSQL(CREATE_NOTES_FTS)
         connection.execSQL(REBUILD_NOTES_FTS)
     }
