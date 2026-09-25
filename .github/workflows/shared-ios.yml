@@ -1,0 +1,277 @@
+# Prime Notes — :shared, compiled and tested for iOS (sandbox only)
+#
+# This is the only place any of :shared's iOS half is ever compiled. The project is developed on
+# Windows, where Kotlin/Native cannot build Apple targets at all, so `iosMain`, the iOS actuals
+# and the iOS test runs have no other way of being checked.
+#
+# WHY THIS REPOSITORY, AND NOT PRIME-NOTES: Prime Notes is private, so macOS minutes spent there
+# are billable and multiplied. This sandbox is public, where they are free. Nothing here modifies
+# the production repository — it is only ever checked out, read-only.
+#
+# HOW IT GETS THE CODE: a fine-grained token (`PRIME_NOTES_READ_PAT`, Contents: Read, scoped to
+# Prime-Notes alone) lets this public workflow clone the private repository. That choice matters:
+# a copy committed here would be a snapshot that drifts, and a green run would then describe code
+# nobody has rather than the code that is committed.
+#
+# HOW THE RESULT IS READ BACK: no GitHub token or CLI is available to the agent driving these
+# runs, so a run cannot be inspected from outside. It therefore commits RESULTS.md back here,
+# which is read over git. Commits made by GITHUB_TOKEN do not re-trigger workflows, so the results
+# commit cannot cause a loop.
+#
+# WHEN IT RUNS: on a push here, and on demand. Nothing watches Prime-Notes, so dispatch this after
+# a change to :shared (Phase 2b onward) and give it the ref to verify.
+#
+# FAILURE DETECTION: every gradlew step sets `pipefail`. Without it a `gradlew ... | tee log`
+# pipeline reports tee's exit code (0) and a failed build is recorded as a success — a bug that
+# already produced one false green run in Phase 0.
+
+name: shared — iOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Prime-Notes ref to verify (branch, tag or SHA)
+        required: false
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: verify :shared for iOS
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Check out Prime-Notes, read-only
+        uses: actions/checkout@v4
+        with:
+          repository: officialaksalman/Prime-Notes
+          ref: ${{ inputs.ref || 'main' }}
+          token: ${{ secrets.PRIME_NOTES_READ_PAT }}
+          path: prime-notes
+
+      # gradlew is committed from Windows and carries mode 100644, so git records it as not
+      # executable and every invocation dies with "Permission denied" until this is fixed.
+      - name: Make gradlew executable
+        working-directory: prime-notes
+        run: chmod +x gradlew
+
+      # Kotlin/Native 2.3.20 hardcodes a Swift runtime search path for a specific Xcode that this
+      # image does not install, so the test executable fails to link with:
+      #   ld: library 'swiftCompatibility51' not found
+      # Select the newest Xcode present, and satisfy the expected path with a symlink. CI-only.
+      - name: Select the newest Xcode and satisfy Kotlin/Native's expected path
+        run: |
+          ls -d /Applications/Xcode*.app 2>/dev/null || echo "(none)"
+          NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$NEWEST" ]; then
+            sudo xcode-select -s "$NEWEST" || true
+            echo "DEVELOPER_DIR=$NEWEST" >> "$GITHUB_ENV"
+          fi
+          xcode-select -p
+          xcodebuild -version
+          if [ -n "$NEWEST" ] && [ ! -e /Applications/Xcode_26.4.app ]; then
+            sudo ln -sfn "$NEWEST" /Applications/Xcode_26.4.app || true
+            echo "symlinked /Applications/Xcode_26.4.app -> $NEWEST"
+          fi
+
+      # Matches the JDK the project is developed and tested against locally (Android Studio's JBR,
+      # 25.0.3). Phase 0's spikes ran on Temurin 17, so lowering this is the first thing to try if
+      # toolchain resolution fails here.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # :shared has an Android target, so AGP resolves a compile SDK even when only the iOS tasks
+      # are asked for. The runner's preinstalled platforms may not include the one the module
+      # compiles against; this makes sure it is there, and is a no-op when it already is.
+      - name: Ensure the Android SDK platform :shared compiles against
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+          echo "sdk=$SDK"
+          ls "$SDK/platforms" 2>/dev/null || echo "(no platforms)"
+          if [ ! -d "$SDK/platforms/android-37" ]; then
+            MANAGER=$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)
+            if [ -n "$MANAGER" ]; then
+              yes | "$MANAGER" "platforms;android-37" || true
+            else
+              echo "(no sdkmanager found; leaving the SDK alone)"
+            fi
+          fi
+
+      - name: Toolchain report
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/logs"
+          {
+            echo "### runner";     sw_vers
+            echo "### xcode";      xcodebuild -version
+            echo "### java";       java -version 2>&1
+            echo "### gradle";     ./gradlew --version
+            echo "### checked out"; git rev-parse HEAD
+            echo "### simulators"; xcrun simctl list devices available | head -20
+          } 2>&1 | tee "$GITHUB_WORKSPACE/logs/00-toolchain.txt"
+        working-directory: prime-notes
+
+      # ------------------------------------------------------------------
+      # Three separate steps, so a failure in one still leaves the others'
+      # evidence. The verdict below turns any of them red into a red run.
+      # ------------------------------------------------------------------
+      - name: "Compile :shared for iosSimulatorArm64"
+        id: compile
+        continue-on-error: true
+        working-directory: prime-notes
+        run: |
+          set -o pipefail
+          ./gradlew :shared:compileKotlinIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/logs/10-compile.txt"
+
+      - name: "Link the Shared framework"
+        id: link
+        continue-on-error: true
+        working-directory: prime-notes
+        run: |
+          set -o pipefail
+          ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/logs/20-link.txt"
+
+      # The strongest evidence this workflow produces: the same commonTest suite that runs on the
+      # Android host, run again on the iOS simulator. That is what actually exercises the
+      # SecRandomCopyBytes generator and the Foundation zip codec — compiled is not the same as
+      # working, and those two files have no other execution path.
+      - name: "Run :shared's commonTest suite on the iOS simulator"
+        id: test
+        continue-on-error: true
+        working-directory: prime-notes
+        run: |
+          set -o pipefail
+          ./gradlew :shared:iosSimulatorArm64Test \
+            --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/logs/30-tests.txt"
+
+      - name: Inspect the linked framework
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/logs"
+          {
+            find prime-notes/shared/build/bin -maxdepth 4 -type d -name '*.framework' 2>/dev/null
+            find prime-notes/shared/build/bin -maxdepth 6 -type f -name 'Shared' \
+              -exec ls -l {} \; 2>/dev/null
+          } | tee "$GITHUB_WORKSPACE/logs/40-framework.txt"
+
+      - name: Collect test results
+        if: always()
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/logs/test-results"
+          find prime-notes -path '*/build/test-results/*' -name '*.xml' \
+            -exec cp {} "$GITHUB_WORKSPACE/logs/test-results/" \; 2>/dev/null || true
+          ls -l "$GITHUB_WORKSPACE/logs/test-results" || true
+
+      - name: Record verdict for this run
+        if: always()
+        run: |
+          {
+            echo "ref=${{ inputs.ref || 'main' }}"
+            echo "sha=$(git -C prime-notes rev-parse HEAD 2>/dev/null || echo unknown)"
+            echo "compileKotlinIosSimulatorArm64=${{ steps.compile.outcome }}"
+            echo "linkDebugFrameworkIosSimulatorArm64=${{ steps.link.outcome }}"
+            echo "iosSimulatorArm64Test=${{ steps.test.outcome }}"
+          } > "$GITHUB_WORKSPACE/logs/99-verdict.txt"
+          cat "$GITHUB_WORKSPACE/logs/99-verdict.txt"
+
+      # A red run must look like one. The three steps above carry `continue-on-error` so that a
+      # compile failure does not erase the test evidence; this is what puts the failure back.
+      - name: Fail the run if any of the three failed
+        if: always()
+        run: |
+          bad=0
+          for outcome in \
+            "${{ steps.compile.outcome }}" \
+            "${{ steps.link.outcome }}" \
+            "${{ steps.test.outcome }}"; do
+            [ "$outcome" = "success" ] || bad=1
+          done
+          if [ "$bad" = "1" ]; then
+            echo "compile=${{ steps.compile.outcome }} link=${{ steps.link.outcome }} test=${{ steps.test.outcome }}"
+            exit 1
+          fi
+          echo "all three succeeded"
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-ios-logs
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 30
+
+  publish:
+    name: publish results
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Build RESULTS.md
+        run: |
+          {
+            echo "# :shared — iOS verification"
+            echo
+            echo "Run [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) on \`macos-15\`."
+            echo
+            echo "Sandbox commit: \`${{ github.sha }}\`"
+            echo
+          } > RESULTS.md
+
+          shopt -s nullglob
+          for d in artifacts/*/; do
+            name=$(basename "$d")
+            echo "## $name" >> RESULTS.md
+            echo '```' >> RESULTS.md
+            [ -f "$d/99-verdict.txt" ] && cat "$d/99-verdict.txt" >> RESULTS.md
+            echo '```' >> RESULTS.md
+
+            if ls "$d"/test-results/*.xml >/dev/null 2>&1; then
+              echo "### test results" >> RESULTS.md
+              echo '```' >> RESULTS.md
+              grep -h -m1 '<testsuite ' "$d"/test-results/*.xml >> RESULTS.md
+              echo '```' >> RESULTS.md
+            fi
+
+            for f in "$d"/*.txt; do
+              [ "$(basename "$f")" = "99-verdict.txt" ] && continue
+              [ "$(basename "$f")" = "40-framework.txt" ] && continue
+              echo "### $(basename "$f")" >> RESULTS.md
+              echo '```' >> RESULTS.md
+              tail -c 20000 "$f" >> RESULTS.md
+              echo '```' >> RESULTS.md
+            done
+          done
+
+      - name: Commit results
+        run: |
+          git config user.name "shared-ios-bot"
+          git config user.email "shared-ios-bot@users.noreply.github.com"
+          git add RESULTS.md
+          if git diff --cached --quiet; then
+            echo "no changes to RESULTS.md"
+          else
+            git commit -m "iOS verification results for ${{ github.sha }} [skip ci]"
+            git push
+          fi
