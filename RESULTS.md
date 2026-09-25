@@ -1,8 +1,8 @@
 # :shared — iOS verification
 
-Run [36198391870](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36198391870) on `macos-15`.
+Run [36199193505](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36199193505) on `macos-15`.
 
-Sandbox commit: `5925027ab71da198ddf41b34ec8cb1707c8513a3`
+Sandbox commit: `896d04041f9c9692b8ae599bdf4ea661c7b0f691`
 
 ## shared-ios-logs
 ```
