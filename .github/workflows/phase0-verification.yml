@@ -127,13 +127,20 @@ jobs:
           ./gradlew -p phase0-ios-verification linkDebugFrameworkIosSimulatorArm64 \
             --stacktrace 2>&1 | tee logs/20-spikeB-ios-framework.txt
 
+      - name: "Spike B — list available tasks (diagnostic)"
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p logs
+          ./gradlew -p phase0-ios-verification tasks --all 2>&1 | tee logs/22-tasks.txt
+
       - name: "Spike B — build shared UI for Android"
         id: spikebandroid
         continue-on-error: true
         run: |
           set -euo pipefail
           mkdir -p logs
-          ./gradlew -p phase0-ios-verification assembleDebug \
+          ./gradlew -p phase0-ios-verification assemble \
             --stacktrace 2>&1 | tee logs/21-spikeB-android.txt
 
       - name: Resolved dependency report

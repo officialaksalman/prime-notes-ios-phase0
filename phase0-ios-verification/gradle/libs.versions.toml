@@ -45,5 +45,8 @@ kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versio
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinVersion" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeVersion" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }
-androidLibrary = { id = "com.android.library", version.ref = "agpVersion" }
 room = { id = "androidx.room", version.ref = "roomVersion" }
+
+# AGP 9+ : com.android.library is NOT compatible with the Kotlin Multiplatform plugin,
+# so the Android target comes from this dedicated plugin instead.
+androidKmpLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agpVersion" }

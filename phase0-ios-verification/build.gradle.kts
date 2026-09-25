@@ -3,14 +3,22 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 /*
  * Phase 0 spike. NOT production code and NOT part of the production build.
  *
- * Versions live in gradle/libs.versions.toml so the CI matrix can override them
- * with sed rather than editing this file.
+ * AGP 9 NOTE: `com.android.library` is incompatible with the Kotlin Multiplatform plugin
+ * from AGP 9.0 on ("Failed to apply plugin 'com.android.internal.library'"). The Android
+ * target therefore comes from `com.android.kotlin.multiplatform.library` and is configured
+ * inside `kotlin { android { ... } }` — there is no top-level `android {}` block, and
+ * `androidTarget()` is not used at all.
+ *
+ * Consequences of that plugin worth remembering for the real migration:
+ *   - no build types / product flavours (single variant)
+ *   - no BuildConfig (production injects its Supabase keys through it)
+ *   - Java compilation, Android resources and tests are all off unless opted in
  */
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidKmpLibrary)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.ksp)
@@ -18,7 +26,11 @@ plugins {
 }
 
 kotlin {
-    androidTarget {
+    android {
+        namespace = "phase0.spike"
+        compileSdk = 37
+        minSdk = 26
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
@@ -75,20 +87,6 @@ dependencies {
     add("kspIosX64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
-}
-
-android {
-    namespace = "phase0.spike"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 }
 
 room {
