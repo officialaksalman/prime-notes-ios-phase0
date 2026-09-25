@@ -80,13 +80,33 @@ kotlin {
     }
 }
 
-// Room's processor must run for every target, or the generated `actual` database
-// implementations are missing on the non-Android ones.
-dependencies {
-    add("kspAndroid", libs.room.compiler)
-    add("kspIosX64", libs.room.compiler)
-    add("kspIosArm64", libs.room.compiler)
-    add("kspIosSimulatorArm64", libs.room.compiler)
+/*
+ * Room's processor must run for every target, or the generated `actual` database
+ * implementations are missing and the target will not compile.
+ *
+ * The configuration names are DISCOVERED rather than assumed. With AGP 9's
+ * `com.android.kotlin.multiplatform.library` there is no `kspAndroid` configuration,
+ * and a hard-coded add() fails the entire build at configuration time — which hides
+ * everything else. This reports what actually exists and wires what it can, so a
+ * missing processor shows up as a clear finding rather than a stack trace.
+ */
+afterEvaluate {
+    val wanted = listOf("kspAndroid", "kspIosX64", "kspIosArm64", "kspIosSimulatorArm64")
+
+    val present = configurations.names.filter { it.startsWith("ksp") }.sorted()
+    println("PHASE0-KSP configurations present: $present")
+
+    wanted.forEach { name ->
+        if (configurations.findByName(name) != null) {
+            dependencies.add(name, libs.room.compiler)
+            println("PHASE0-KSP wired: $name")
+        } else {
+            println("PHASE0-KSP MISSING: $name")
+        }
+    }
+
+    val unhandled = present.filterNot { it in wanted || it.contains("ProcessorClasspath") }
+    println("PHASE0-KSP unhandled configurations: $unhandled")
 }
 
 room {
