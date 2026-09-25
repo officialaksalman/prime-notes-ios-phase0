@@ -70,5 +70,18 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+
+        // Two Kotlin/Native restrictions bite `commonTest`, and both are invisible on this machine
+        // because the Android host compilation accepts them happily:
+        //
+        //   * a backtick-quoted function name may not contain `,` (nor `.`, `;`, `:`, `[`, `]`,
+        //     `/`, `\`, `<`, `>`). A test name that reads well on the JVM fails to compile for iOS
+        //     with "Name contains illegal characters".
+        //   * `String.toByteArray()` is JVM-only. The multiplatform spelling is
+        //     `encodeToByteArray()`.
+        //
+        // The metadata compilation does not catch either one — only compiling the *tests* for a
+        // Native target does. The `shared — iOS` workflow in the phase-0 sandbox is what does
+        // that, and it is the only thing that does.
     }
 }

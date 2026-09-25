@@ -42,3 +42,11 @@ Then update the commit above in the same commit, so the record moves with the co
 This directory is in a **public** repository. The module it mirrors is not. Whatever is in
 `shared/src` above is published, so the sync procedure should be used deliberately rather than on
 a schedule.
+
+## Revisions
+
+- **Second sync.** The first iOS run of this copy compiled and linked, and then failed to compile
+  the tests for Kotlin/Native: three backtick-quoted test names contained a comma, which Native
+  rejects, and two call sites used `String.toByteArray()`, which is JVM-only. Both were fixed
+  upstream in Prime-Notes and re-copied. The Android host compilation had accepted all five
+  without complaint, which is the whole reason this directory exists.
