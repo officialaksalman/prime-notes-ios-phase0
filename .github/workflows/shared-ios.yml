@@ -239,24 +239,34 @@ jobs:
             echo
           } > RESULTS.md
 
+          # `shopt -s nullglob` is load-bearing: a directory with no `.txt` logs must iterate zero
+          # times rather than once over the literal pattern. It is also what broke the first
+          # version of this script — `ls dir/*.xml` on an empty directory collapsed to `ls dir/`,
+          # which succeeds, so the guard passed and the `grep` behind it was handed no files, read
+          # stdin, failed, and `set -e` ended the step before it could commit anything. Hence the
+          # array, and `|| true` on the grep: the summary is not worth a red run.
           shopt -s nullglob
           for d in artifacts/*/; do
             name=$(basename "$d")
             echo "## $name" >> RESULTS.md
             echo '```' >> RESULTS.md
-            [ -f "$d/99-verdict.txt" ] && cat "$d/99-verdict.txt" >> RESULTS.md
+            if [ -f "$d/99-verdict.txt" ]; then
+              cat "$d/99-verdict.txt" >> RESULTS.md
+            fi
             echo '```' >> RESULTS.md
 
-            if ls "$d"/test-results/*.xml >/dev/null 2>&1; then
+            results=("$d"/test-results/*.xml)
+            if [ -e "${results[0]:-}" ]; then
               echo "### test results" >> RESULTS.md
               echo '```' >> RESULTS.md
-              grep -h -m1 '<testsuite ' "$d"/test-results/*.xml >> RESULTS.md
+              grep -h -m1 '<testsuite ' "${results[@]}" >> RESULTS.md || true
               echo '```' >> RESULTS.md
             fi
 
             for f in "$d"/*.txt; do
-              [ "$(basename "$f")" = "99-verdict.txt" ] && continue
-              [ "$(basename "$f")" = "40-framework.txt" ] && continue
+              case "$(basename "$f")" in
+                99-verdict.txt) continue ;;
+              esac
               echo "### $(basename "$f")" >> RESULTS.md
               echo '```' >> RESULTS.md
               tail -c 20000 "$f" >> RESULTS.md

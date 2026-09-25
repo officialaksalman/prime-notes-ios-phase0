@@ -23,6 +23,12 @@ name: Phase 0 — iOS/KMP verification
 on:
   push:
     branches: [main]
+    # Only when the spikes themselves change. Phase 0 is finished, and without this filter every
+    # push to this repository — including one that adds an unrelated workflow — re-ran the whole
+    # three-leg macOS matrix.
+    paths:
+      - 'phase0-ios-verification/**'
+      - '.github/workflows/phase0-verification.yml'
   workflow_dispatch:
 
 permissions:
