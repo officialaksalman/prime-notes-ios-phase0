@@ -34,6 +34,14 @@ suspend fun phase0SignIn(client: SupabaseClient, email: String, password: String
 }
 
 /**
+ * A real HTTPS round trip that needs no credentials: the backend's own health function,
+ * which the publishable key is allowed to call. Construction alone would not prove the
+ * Darwin engine ever talks to the network, so this is the point of the probe.
+ */
+suspend fun phase0HealthBody(client: SupabaseClient): String =
+    client.postgrest.rpc("app_health").data
+
+/**
  * A read the publishable key is allowed to attempt. Being *denied* by row-level security is
  * not a failure — it proves the boundary holds. Returning rows would be the alarm.
  */

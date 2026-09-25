@@ -145,8 +145,13 @@ jobs:
         id: uicloudtest
         continue-on-error: true
         env:
-          PHASE0_SUPABASE_URL: ${{ secrets.PHASE0_SUPABASE_URL }}
-          PHASE0_SUPABASE_ANON_KEY: ${{ secrets.PHASE0_SUPABASE_ANON_KEY }}
+          # Non-secret by design: the URL and the publishable ("anon") key ship inside every
+          # Android APK, and RLS — not the key — is the boundary. Supplying them here lets the
+          # spike perform a real HTTPS round trip (health + RLS-denied read) with no credentials.
+          PHASE0_SUPABASE_URL: https://ikmnfqzsvdcfuxizevti.supabase.co
+          PHASE0_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbW5mcXpzdmRjZnV4aXpldnRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwNzc0MjEsImV4cCI6MjEwNTY1MzQyMX0.YE-uy6nA1SJ87tcX7CDQS_r9tyD4pbFEDyBeZ7BX1NA
+          # Still secrets: needed only for the full sign-in / session-restore flow, and must
+          # never be committed. Absent -> that test reports SKIPPED rather than pretending.
           PHASE0_TEST_EMAIL: ${{ secrets.PHASE0_TEST_EMAIL }}
           PHASE0_TEST_PASSWORD: ${{ secrets.PHASE0_TEST_PASSWORD }}
         run: |
