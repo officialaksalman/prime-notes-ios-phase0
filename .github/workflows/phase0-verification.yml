@@ -84,6 +84,23 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
+      # Kotlin/Native 2.3.20+ hardcodes a Swift runtime search path for a specific Xcode
+      # that this image does not install (it has 26.3, the toolchain looks for 26.4), so the
+      # iOS test executable fails to link with:
+      #   ld: library 'swiftCompatibility51' not found
+      # Satisfy the expected path with a symlink to the Xcode that IS present. CI-only.
+      - name: Satisfy the Kotlin/Native expected Xcode path
+        run: |
+          if [ ! -e /Applications/Xcode_26.4.app ]; then
+            TARGET=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+            if [ -n "$TARGET" ]; then
+              sudo ln -sfn "$TARGET" /Applications/Xcode_26.4.app || true
+              echo "symlinked /Applications/Xcode_26.4.app -> $TARGET"
+            fi
+          fi
+          ls -ld /Applications/Xcode*.app 2>/dev/null || true
+          ls /Applications/Xcode_26.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator/ 2>/dev/null | grep -i compatibility || echo "(no swiftCompatibility* found)"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -1,6 +1,7 @@
 package phase0.room
 
 import androidx.room3.ColumnInfo
+import androidx.room3.ConstructedBy
 import androidx.room3.Dao
 import androidx.room3.Database
 import androidx.room3.Entity
@@ -93,14 +94,24 @@ val MIGRATION_1_2: Migration = object : Migration(1, 2) {
     }
 }
 
+/*
+ * `@ConstructedBy` is REQUIRED on a @Database class that targets non-Android platforms.
+ * Without it Room's processor fails with:
+ *   "The @Database class must be annotated with @ConstructedBy since the source is
+ *    targeting non-Android platforms."
+ * The referenced object is what Room's KSP processor fills in with an `actual`.
+ */
+
 /** The schema before the search index existed. */
 @Database(entities = [NoteEntity::class], version = 1, exportSchema = false)
+@ConstructedBy(Phase0DatabaseV1Constructor::class)
 abstract class Phase0DatabaseV1 : RoomDatabase() {
     abstract fun noteDao(): NoteDaoV1
 }
 
 /** The schema after the search index was added. */
 @Database(entities = [NoteEntity::class, NoteFtsEntity::class], version = 2, exportSchema = false)
+@ConstructedBy(Phase0DatabaseConstructor::class)
 abstract class Phase0Database : RoomDatabase() {
     abstract fun noteDao(): NoteDao
 }
