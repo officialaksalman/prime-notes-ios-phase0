@@ -1,24 +1,27 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 /*
- * Phase 0 spike. NOT production code and NOT part of the production build.
+ * Phase 0 spike — iOS targets only. NOT production code, NOT part of the production build.
  *
- * AGP 9 NOTE: `com.android.library` is incompatible with the Kotlin Multiplatform plugin
- * from AGP 9.0 on ("Failed to apply plugin 'com.android.internal.library'"). The Android
- * target therefore comes from `com.android.kotlin.multiplatform.library` and is configured
- * inside `kotlin { android { ... } }` — there is no top-level `android {}` block, and
- * `androidTarget()` is not used at all.
+ * WHY THERE IS NO ANDROID TARGET (measured, not assumed):
+ *   1. `com.android.library` is incompatible with the Kotlin Multiplatform plugin from
+ *      AGP 9.0 on ("Failed to apply plugin 'com.android.internal.library'").
+ *   2. Its official replacement, `com.android.kotlin.multiplatform.library`, does not
+ *      create a `kspAndroid` configuration, and KSP then dies with
+ *      "KotlinMultiplatformAndroidCompilationImpl cannot be cast to KotlinJvmAndroidCompilation".
+ *      Room needs KSP, so a shared module with an Android target cannot use Room today.
  *
- * Consequences of that plugin worth remembering for the real migration:
- *   - no build types / product flavours (single variant)
- *   - no BuildConfig (production injects its Supabase keys through it)
- *   - Java compilation, Android resources and tests are all off unless opted in
+ * So this spike measures what it still can: Room KMP + FTS4 + migrations on the iOS
+ * simulator, Compose Multiplatform on iOS, and Supabase over Ktor Darwin.
+ * Android's own health is covered by the production build, not by this module.
+ *
+ * The Room code below deliberately stays in commonMain: that is what production would
+ * look like, and compiling it only for iOS is enough to answer the schema question.
  */
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidKmpLibrary)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.ksp)
@@ -26,16 +29,6 @@ plugins {
 }
 
 kotlin {
-    android {
-        namespace = "phase0.spike"
-        compileSdk = 37
-        minSdk = 26
-
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
-
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Phase0Spike"
@@ -56,7 +49,7 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
 
-            // Spike C — Supabase over Ktor (engine supplied per platform).
+            // Spike C — Supabase over Ktor.
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.auth)
             implementation(libs.ktor.client.core)
@@ -70,10 +63,6 @@ kotlin {
             implementation(libs.coroutines.test)
         }
 
-        androidMain.dependencies {
-            implementation(libs.ktor.client.okhttp)
-        }
-
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
@@ -84,14 +73,11 @@ kotlin {
  * Room's processor must run for every target, or the generated `actual` database
  * implementations are missing and the target will not compile.
  *
- * The configuration names are DISCOVERED rather than assumed. With AGP 9's
- * `com.android.kotlin.multiplatform.library` there is no `kspAndroid` configuration,
- * and a hard-coded add() fails the entire build at configuration time — which hides
- * everything else. This reports what actually exists and wires what it can, so a
- * missing processor shows up as a clear finding rather than a stack trace.
+ * Configuration names are DISCOVERED rather than assumed, and reported, so a missing
+ * processor shows up as a clear finding rather than a stack trace.
  */
 afterEvaluate {
-    val wanted = listOf("kspAndroid", "kspIosX64", "kspIosArm64", "kspIosSimulatorArm64")
+    val wanted = listOf("kspIosX64", "kspIosArm64", "kspIosSimulatorArm64")
 
     val present = configurations.names.filter { it.startsWith("ksp") }.sorted()
     println("PHASE0-KSP configurations present: $present")
@@ -104,9 +90,6 @@ afterEvaluate {
             println("PHASE0-KSP MISSING: $name")
         }
     }
-
-    val unhandled = present.filterNot { it in wanted || it.contains("ProcessorClasspath") }
-    println("PHASE0-KSP unhandled configurations: $unhandled")
 }
 
 room {

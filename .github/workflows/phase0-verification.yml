@@ -142,14 +142,18 @@ jobs:
           mkdir -p logs
           ./gradlew -p phase0-ios-verification tasks --all 2>&1 | tee logs/22-tasks.txt
 
-      - name: "Spike B — build shared UI for Android"
-        id: spikebandroid
-        continue-on-error: true
+      - name: "Android target — intentionally ABSENT in this spike (see build.gradle.kts)"
         run: |
-          set -euo pipefail
           mkdir -p logs
-          ./gradlew -p phase0-ios-verification assemble \
-            --stacktrace 2>&1 | tee logs/21-spikeB-android.txt
+          {
+            echo "The Android target is deliberately NOT part of this spike. Measured reasons:"
+            echo "  1. AGP 9 rejects com.android.library together with the Kotlin Multiplatform plugin."
+            echo "  2. Its replacement, com.android.kotlin.multiplatform.library, creates no"
+            echo "     kspAndroid configuration, and KSP then fails with a ClassCastException"
+            echo "     (KotlinMultiplatformAndroidCompilationImpl -> KotlinJvmAndroidCompilation)."
+            echo "  3. Room needs KSP, so a shared module with an Android target cannot use Room today."
+            echo "Android health is verified by the production build, not by this module."
+          } | tee logs/21-spikeB-android.txt
 
       - name: Resolved dependency report
         continue-on-error: true
@@ -168,7 +172,7 @@ jobs:
             echo "ksp=${{ matrix.ksp }}"
             echo "spikeA_and_C=${{ steps.spiketests.outcome }}"
             echo "spikeB_ios_framework=${{ steps.spikebios.outcome }}"
-            echo "spikeB_android=${{ steps.spikebandroid.outcome }}"
+            echo "android_target=ABSENT (AGP9+KSP incompatible; see 21-spikeB-android.txt)"
             echo "job_status=${{ job.status }}"
           } > logs/99-verdict.txt
           cat logs/99-verdict.txt
