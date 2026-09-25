@@ -3,23 +3,24 @@
 # The CI matrix rewrites these lines with sed, and a key that also names a plugin
 # alias matches two lines — which silently overwrites the plugin declaration.
 #
-# Overridden per CI matrix leg:
-#   kotlinVersion  2.2.10 (production) / 2.2.20 (what CMP recommends for iOS)
-#   composeVersion 1.9.3 (last line with a stable material3) / 1.12.1 (latest stable)
+# Overridden per CI matrix leg: the two Compose Multiplatform lines that have a usable
+# iOS material3 (see the note below). Kotlin stays at 2.2.20, which CMP recommends for iOS.
 kotlinVersion = "2.2.20"
 kspVersion = "2.2.20-2.0.4"
-composeVersion = "1.9.3"
+composeVersion = "1.12.1"
 agpVersion = "9.4.0"
 
 # IMPORTANT, measured from Maven Central: org.jetbrains.compose.material3:material3
-# does NOT follow the Compose Multiplatform version line. Its last STABLE release is
-# 1.9.0; everything after (1.10.0-alpha05, 1.11.0-alpha07, 1.12.0-alpha03) is alpha.
-# So it is versioned separately here rather than reusing composeVersion.
-composeMaterial3Version = "1.9.0"
+# does NOT follow the Compose Multiplatform version line, and its iOS artifacts only begin
+# at 1.11.0-alpha01 — there is no iOS material3 for the 1.9 or 1.10 lines at all.
+# 1.12.0-alpha03 publishes an iossimulatorarm64 module whose klib the Kotlin resolver
+# cannot find, so it is avoided here too.
+composeMaterial3Version = "1.13.0-alpha01"
 
-# Deliberately the SAME Room production already uses: the question is whether the
-# existing Android Room setup can gain an iOS target, not whether a newer one exists.
-roomVersion = "2.8.5"
+# Room KMP. androidx.room:2.8.5 (what production uses) CANNOT target iOS: it depends on
+# androidx.sqlite:sqlite-framework, which publishes no iOS artifact at all (404 on
+# sqlite-framework-iossimulatorarm64). The KMP-capable line is androidx.room3 — currently alpha.
+roomVersion = "3.1.0-alpha01"
 sqliteVersion = "2.7.1"
 
 ktorVersion = "3.1.2"
@@ -35,8 +36,8 @@ compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", v
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeVersion" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3Version" }
 
-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomVersion" }
-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomVersion" }
+room-runtime = { module = "androidx.room3:room3-runtime", version.ref = "roomVersion" }
+room-compiler = { module = "androidx.room3:room3-compiler", version.ref = "roomVersion" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqliteVersion" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorVersion" }
@@ -58,7 +59,7 @@ kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versio
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinVersion" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeVersion" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }
-room = { id = "androidx.room", version.ref = "roomVersion" }
+room = { id = "androidx.room3", version.ref = "roomVersion" }
 
 # AGP 9+ : com.android.library is NOT compatible with the Kotlin Multiplatform plugin,
 # so the Android target comes from this dedicated plugin instead.

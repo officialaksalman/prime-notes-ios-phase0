@@ -32,19 +32,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Leg 1 is the conservative combination; leg 2 the one the migration would
-        # actually want. Reported independently so one failing leg still yields data.
+        # Two Compose Multiplatform lines, because material3 has no iOS artifact before
+        # 1.11.0-alpha01 and 1.12.0-alpha03's klib is unreadable. Reported independently.
         include:
-          - kotlin: "2.2.10"
-            ksp: "2.2.10-2.0.2"
-            compose: "1.9.3"
-            material3: "1.9.0"
-            label: prod-kotlin-2.2.10_stable-cmp-1.9.3
           - kotlin: "2.2.20"
             ksp: "2.2.20-2.0.4"
             compose: "1.12.1"
-            material3: "1.12.0-alpha03"
-            label: cmp-recommended-kotlin-2.2.20_cmp-1.12.1
+            material3: "1.13.0-alpha01"
+            label: cmp-1.12.1_m3-1.13.0-alpha01
+          - kotlin: "2.2.20"
+            ksp: "2.2.20-2.0.4"
+            compose: "1.11.1"
+            material3: "1.11.0-alpha07"
+            label: cmp-1.11.1_m3-1.11.0-alpha07
 
     steps:
       - uses: actions/checkout@v4
