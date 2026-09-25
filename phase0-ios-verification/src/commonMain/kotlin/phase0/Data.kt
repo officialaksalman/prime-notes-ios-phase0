@@ -89,13 +89,13 @@ val MIGRATION_1_2: Migration = object : Migration(1, 2) {
 }
 
 /** The schema before the search index existed. */
-@Database(entities = [NoteEntity::class], version = 1)
+@Database(entities = [NoteEntity::class], version = 1, exportSchema = false)
 abstract class Phase0DatabaseV1 : RoomDatabase() {
     abstract fun noteDao(): NoteDaoV1
 }
 
 /** The schema after the search index was added. */
-@Database(entities = [NoteEntity::class, NoteFtsEntity::class], version = 2)
+@Database(entities = [NoteEntity::class, NoteFtsEntity::class], version = 2, exportSchema = false)
 abstract class Phase0Database : RoomDatabase() {
     abstract fun noteDao(): NoteDao
 }

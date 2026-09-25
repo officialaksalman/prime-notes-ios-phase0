@@ -92,6 +92,10 @@ afterEvaluate {
     }
 }
 
-room {
-    schemaDirectory("$projectDir/schemas")
-}
+/*
+ * NOTE: there is no `room { schemaDirectory(...) }` block here. The `androidx.room3` Gradle
+ * plugin does not expose a `room` extension (the `androidx.room` one did), so referring to it
+ * is a build-script compile error. The spike does not need exported schemas — it uses a
+ * hand-written Migration rather than auto-migrations — so schema export is disabled on the
+ * @Database declarations in Data.kt instead.
+ */
