@@ -1,21 +1,21 @@
 # :shared — iOS verification
 
-Run [36200696197](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36200696197) on `macos-15`.
+Run [36248983356](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36248983356) on `macos-15`.
 
-Sandbox commit: `d10fd5274ead39351423efd95e163e21248c9407`
+Sandbox commit: `5c439f8819655445a3ea52d8253e87053bb08de8`
 
 ## shared-ios-logs
 ```
-sha=d10fd5274ead39351423efd95e163e21248c9407
+sha=5c439f8819655445a3ea52d8253e87053bb08de8
 compileKotlinIosSimulatorArm64=success
 linkDebugFrameworkIosSimulatorArm64=success
 iosSimulatorArm64Test=success
 ```
 ### test results
 ```
-<testsuite name="iosSimulatorArm64Test.com.primenotes.bd.domain.account.PasswordPolicyTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-09-25T23:27:40.774Z" hostname="sjc20-cw711-da44f87f-036f-4122-893c-ed291f977bf4-3AF6782363CF.local" time="0.015">
-<testsuite name="iosSimulatorArm64Test.com.primenotes.bd.domain.backup.ImportPlanTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-09-25T23:27:40.789Z" hostname="sjc20-cw711-da44f87f-036f-4122-893c-ed291f977bf4-3AF6782363CF.local" time="0.006">
-<testsuite name="iosSimulatorArm64Test.com.primenotes.bd.domain.backup.NoteArchiveTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-09-25T23:27:40.795Z" hostname="sjc20-cw711-da44f87f-036f-4122-893c-ed291f977bf4-3AF6782363CF.local" time="0.007">
+<testsuite name="iosSimulatorArm64Test.com.primenotes.bd.domain.account.PasswordPolicyTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-09-26T14:40:56.406Z" hostname="sat12-dp146-d1f24377-2d14-4967-8b4d-e2197b74bc8f-82A1636B540F.local" time="0.019">
+<testsuite name="iosSimulatorArm64Test.com.primenotes.bd.domain.backup.ImportPlanTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-09-26T14:40:56.427Z" hostname="sat12-dp146-d1f24377-2d14-4967-8b4d-e2197b74bc8f-82A1636B540F.local" time="0.002">
+<testsuite name="iosSimulatorArm64Test.com.primenotes.bd.domain.backup.NoteArchiveTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-09-26T14:40:56.430Z" hostname="sat12-dp146-d1f24377-2d14-4967-8b4d-e2197b74bc8f-82A1636B540F.local" time="0.006">
 ```
 ### 00-toolchain.txt
 ```
@@ -93,7 +93,7 @@ Done.
 Extracting dependency: /Users/runner/.konan/dependencies/cache/libffi-3.3-1-macos-arm64.tar.gz into /Users/runner/.konan/dependencies
 
 > Task :shared:compileKotlinIosSimulatorArm64 FROM-CACHE
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790378631559.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790433517208.json
 
 BUILD SUCCESSFUL in 34s
 3 actionable tasks: 2 executed, 1 from cache
@@ -108,9 +108,9 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 
 > Task :shared:linkDebugFrameworkIosSimulatorArm64
 w: The number of threads 4 is more than the number of processors 3
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790378662713.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790433549453.json
 
-BUILD SUCCESSFUL in 31s
+BUILD SUCCESSFUL in 28s
 4 actionable tasks: 2 executed, 2 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
@@ -122,20 +122,17 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 > Task :shared:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :shared:iosSimulatorArm64ProcessResources NO-SOURCE
 > Task :shared:iosSimulatorArm64MainKlibrary UP-TO-DATE
-> Task :shared:compileTestKotlinIosSimulatorArm64
-
-> Task :shared:linkDebugTestIosSimulatorArm64
-w: The number of threads 4 is more than the number of processors 3
-
+> Task :shared:compileTestKotlinIosSimulatorArm64 FROM-CACHE
+> Task :shared:linkDebugTestIosSimulatorArm64 FROM-CACHE
 > Task :shared:iosSimulatorArm64Test
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790378694262.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790433578407.json
 
-BUILD SUCCESSFUL in 2m 47s
-6 actionable tasks: 4 executed, 2 up-to-date
+BUILD SUCCESSFUL in 1m 18s
+6 actionable tasks: 2 executed, 2 from cache, 2 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
 ### 40-framework.txt
 ```
 shared-ios/shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework
--rwxr-xr-x  1 runner  staff  8546008 Sep 25 23:24 shared-ios/shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework/Shared
+-rwxr-xr-x  1 runner  staff  8546008 Sep 26 14:39 shared-ios/shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework/Shared
 ```
