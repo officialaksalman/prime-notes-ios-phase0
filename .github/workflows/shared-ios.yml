@@ -14,12 +14,13 @@
 # convenience is stated plainly there: the verified code is a snapshot, not the repository, and
 # it drifts.
 #
-# HOW THE RESULT IS READ BACK: no token or CLI is available to the agent driving these runs, so a
-# run cannot be inspected from outside it. It therefore commits RESULTS.md back here, which is
-# read over git. Commits made by GITHUB_TOKEN do not re-trigger workflows, so the results commit
-# cannot cause a loop.
+# WHEN IT RUNS: only when `shared-ios/` or this file changes, and on demand.
 #
-# WHEN IT RUNS: on a push here, and on demand. Dispatching lets you pick the branch in the UI.
+# THE PATH FILTER IS LOAD-BEARING. Without it this workflow fires on every push to `main`,
+# including the Phase 3.5 probe commits, and each of those spends four minutes of macOS time
+# rebuilding a copy that the commit did not touch. Five such runs were recorded red before the
+# filter was added — failures caused by the trigger, not by any code. Dispatching still lets you
+# pick the branch in the UI.
 #
 # FAILURE DETECTION: every gradlew step sets `pipefail`. Without it a `gradlew ... | tee log`
 # pipeline reports tee's exit code (0) and a failed build is recorded as a success — a bug that
@@ -30,6 +31,9 @@ name: shared — iOS
 on:
   push:
     branches: [main]
+    paths:
+      - 'shared-ios/**'
+      - '.github/workflows/shared-ios.yml'
   workflow_dispatch:
 
 permissions:
@@ -266,5 +270,17 @@ jobs:
             echo "no changes to RESULTS.md"
           else
             git commit -m "iOS verification results for ${{ github.sha }} [skip ci]"
-            git push
+            # Rebase before pushing. Both this workflow and the Phase 3.5 one commit their results
+            # file on `main`, so without a rebase whichever pushes second is rejected as
+            # non-fast-forward — which is how the Phase 3.5 run's log was lost.
+            for attempt in 1 2 3; do
+              if git pull --rebase --autostash origin main && git push; then
+                echo "pushed on attempt $attempt"
+                exit 0
+              fi
+              echo "push rejected (attempt $attempt); retrying"
+              sleep 5
+            done
+            echo "could not push RESULTS.md after 3 attempts"
+            exit 1
           fi
