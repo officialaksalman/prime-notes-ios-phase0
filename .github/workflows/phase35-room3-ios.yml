@@ -1,0 +1,227 @@
+# Prime Notes — Phase 3.5: can room3 run this app's database on iOS?
+#
+# The question. Prime Notes' Android database is `androidx.room` 2.8.5, whose KMP artifacts contain
+# annotations only — no RoomDatabase, no Builder, no Migration, no AutoMigrationSpec. So 2.8.5 can
+# hold entities, DAOs and repositories as common code (that is what Phase 3 did) but cannot own a
+# database on iOS. The candidate is `androidx.room3` 3.1.0-alpha01.
+#
+# WHAT THIS RUNS. `phase35/probe` is a self-contained throwaway build: seven entities copied from
+# Prime Notes' own schema, FTS4 external content, and the real v6 schema committed under
+# `phase35/probe/schemas/` so Room generates the v6 -> v7 auto-migration from the app's actual v6
+# shape rather than an invented one. Two tests drive the *generated* migration:
+#
+#   * the v6 -> v7 upgrade keeps every note, drops `color`, carries `content_document` across, and
+#     leaves the trashed note a tombstone and the sync cursors intact;
+#   * the external-content FTS index still answers with the right notes afterwards — the assertion
+#     that matters most, because rebuilding `notes` renumbers the rows the index is keyed by.
+#
+# WHY HERE AND NOT IN PRIME-NOTES. Prime Notes is private, so macOS minutes there are billable and
+# multiplied. This sandbox is public, where they are free. No token and no secret are involved.
+#
+# THE POINT OF THE RUN. Everything before this compiled; this is what EXECUTES the migration on an
+# actual iOS simulator against a real file in the app's Documents directory. Compiling is not the
+# same as working, and FTS4 virtual tables on Apple's bundled SQLite is exactly the kind of thing
+# that compiles and then misbehaves.
+#
+# FAILURE DETECTION: every gradlew step sets `pipefail`. Without it a `gradlew ... | tee log`
+# pipeline reports tee's exit code and a failed build is recorded as a success — a bug that already
+# produced one false green run in Phase 0.
+
+name: phase35 — room3 on iOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'phase35/**'
+      - '.github/workflows/phase35-room3-ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: run the room3 migration on the iOS simulator
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # Kotlin/Native 2.3.20 hardcodes a Swift runtime search path for a specific Xcode that this
+      # image does not install, so the test executable fails to link with
+      # "ld: library 'swiftCompatibility51' not found". Satisfy the expected path with a symlink.
+      - name: Select the newest Xcode and satisfy Kotlin/Native's expected path
+        run: |
+          NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$NEWEST" ]; then
+            sudo xcode-select -s "$NEWEST" || true
+            echo "DEVELOPER_DIR=$NEWEST" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$NEWEST" ] && [ ! -e /Applications/Xcode_26.4.app ]; then
+            sudo ln -sfn "$NEWEST" /Applications/Xcode_26.4.app || true
+            echo "symlinked /Applications/Xcode_26.4.app -> $NEWEST"
+          fi
+          xcodebuild -version
+
+      # Matches the JDK used locally (Android Studio's JBR). The probe's own build does not depend
+      # on the Android SDK, so nothing here needs a platform installed.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Toolchain report
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p logs
+          {
+            echo "### runner";  sw_vers
+            echo "### xcode";   xcodebuild -version
+            echo "### java";    java -version 2>&1
+            echo "### gradle";  ./gradlew --version
+            echo "### sources"; find phase35 -name '*.kt' | wc -l
+          } 2>&1 | tee logs/00-toolchain.txt
+
+      # Separate steps so one failure does not erase the others' evidence. The verdict step below
+      # turns any red into a red run.
+      - name: "Compile the probe for iosSimulatorArm64"
+        id: compile
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew -p phase35 :probe:compileKotlinIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee logs/10-compile.txt
+
+      - name: "Link the Probe framework"
+        id: link
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew -p phase35 :probe:linkDebugFrameworkIosSimulatorArm64 \
+            --stacktrace 2>&1 | tee logs/20-link.txt
+
+      # The whole point of this run.
+      - name: "Run the v6 to v7 migration tests on the iOS simulator"
+        id: test
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew -p phase35 :probe:iosSimulatorArm64Test \
+            --stacktrace 2>&1 | tee logs/30-tests.txt
+
+      - name: Collect test results
+        if: always()
+        run: |
+          mkdir -p logs/test-results
+          find phase35 -path '*/build/test-results/*' -name '*.xml' \
+            -exec cp {} logs/test-results/ \; 2>/dev/null || true
+          ls -l logs/test-results || true
+
+      - name: Record verdict for this run
+        if: always()
+        run: |
+          {
+            echo "sha=$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+            echo "compileKotlinIosSimulatorArm64=${{ steps.compile.outcome }}"
+            echo "linkDebugFrameworkIosSimulatorArm64=${{ steps.link.outcome }}"
+            echo "iosSimulatorArm64Test=${{ steps.test.outcome }}"
+          } > logs/99-verdict.txt
+          cat logs/99-verdict.txt
+
+      - name: Fail the run if any step failed
+        if: always()
+        run: |
+          bad=0
+          for outcome in \
+            "${{ steps.compile.outcome }}" \
+            "${{ steps.link.outcome }}" \
+            "${{ steps.test.outcome }}"; do
+            [ "$outcome" = "success" ] || bad=1
+          done
+          if [ "$bad" = "1" ]; then
+            echo "compile=${{ steps.compile.outcome }} link=${{ steps.link.outcome }} test=${{ steps.test.outcome }}"
+            exit 1
+          fi
+          echo "all three succeeded"
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase35-room3-ios-logs
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 30
+
+  publish:
+    name: publish results
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Build RESULTS.md
+        run: |
+          {
+            echo "# Phase 3.5 — room3 on iOS"
+            echo
+            echo "Run [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) on \`macos-15\`."
+            echo
+            echo "Sandbox commit: \`${{ github.sha }}\`"
+            echo
+          } > RESULTS-PHASE35.md
+
+          # `shopt -s nullglob` is load-bearing: with it, a directory holding no `.txt` logs
+          # iterates zero times instead of once over the literal pattern.
+          shopt -s nullglob
+          for d in artifacts/*/; do
+            name=$(basename "$d")
+            echo "## $name" >> RESULTS-PHASE35.md
+            echo '```' >> RESULTS-PHASE35.md
+            if [ -f "$d/99-verdict.txt" ]; then
+              cat "$d/99-verdict.txt" >> RESULTS-PHASE35.md
+            fi
+            echo '```' >> RESULTS-PHASE35.md
+
+            results=("$d"/test-results/*.xml)
+            if [ -e "${results[0]:-}" ]; then
+              echo "### test results" >> RESULTS-PHASE35.md
+              echo '```' >> RESULTS-PHASE35.md
+              grep -h -m1 '<testsuite ' "${results[@]}" >> RESULTS-PHASE35.md || true
+              echo '```' >> RESULTS-PHASE35.md
+            fi
+
+            for f in "$d"/*.txt; do
+              case "$(basename "$f")" in
+                99-verdict.txt) continue ;;
+              esac
+              echo "### $(basename "$f")" >> RESULTS-PHASE35.md
+              echo '```' >> RESULTS-PHASE35.md
+              tail -c 20000 "$f" >> RESULTS-PHASE35.md
+              echo '```' >> RESULTS-PHASE35.md
+            done
+          done
+
+      - name: Commit results
+        run: |
+          git config user.name "phase35-bot"
+          git config user.email "phase35-bot@users.noreply.github.com"
+          git add RESULTS-PHASE35.md
+          if git diff --cached --quiet; then
+            echo "no changes to RESULTS-PHASE35.md"
+          else
+            git commit -m "Phase 3.5 iOS results for ${{ github.sha }} [skip ci]"
+            git push
+          fi
