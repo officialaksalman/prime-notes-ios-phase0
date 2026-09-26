@@ -1,20 +1,20 @@
 # Phase 3.5 — room3 on iOS
 
-Run [36252632239](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36252632239) on `macos-15`.
+Run [36253299190](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36253299190) on `macos-15`.
 
-Sandbox commit: `1eb4850f30a6ac08eca4616d5123d82df3a836b5`
+Sandbox commit: `7cfcd1951a4b63853fe513a57ee4ef7138362e41`
 
 ## phase35-room3-ios-logs
 ```
-sha=1eb4850f30a6ac08eca4616d5123d82df3a836b5
+sha=7cfcd1951a4b63853fe513a57ee4ef7138362e41
 compileKotlinIosSimulatorArm64=success
 linkDebugFrameworkIosSimulatorArm64=success
 iosSimulatorArm64Test=failure
 ```
 ### test results
 ```
-<testsuite name="iosSimulatorArm64Test.phase35.probe.MigrationBehaviourTest" tests="2" skipped="0" failures="2" errors="0" timestamp="2026-09-26T15:44:03.791Z" hostname="sjc22-be111-971cdafb-67e9-45bd-9efe-5d1a230cb51c-760A1548E431.local" time="0.643">
-<testsuite name="iosSimulatorArm64Test.phase35.probe.PlatformSupportTest" tests="1" skipped="0" failures="1" errors="0" timestamp="2026-09-26T15:44:04.436Z" hostname="sjc22-be111-971cdafb-67e9-45bd-9efe-5d1a230cb51c-760A1548E431.local" time="0.001">
+<testsuite name="iosSimulatorArm64Test.phase35.probe.MigrationBehaviourTest" tests="2" skipped="0" failures="1" errors="0" timestamp="2026-09-26T15:53:45.262Z" hostname="sat12-bq154-92310c05-583e-457d-8b9b-75988f79ce3e-6AB084D03480.local" time="0.336">
+<testsuite name="iosSimulatorArm64Test.phase35.probe.PlatformSupportTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-26T15:53:45.605Z" hostname="sat12-bq154-92310c05-583e-457d-8b9b-75988f79ce3e-6AB084D03480.local" time="0.001">
 ```
 ### 00-toolchain.txt
 ```
@@ -64,16 +64,13 @@ Downloading dependency https://download.jetbrains.com/kotlin/native/libffi-3.3-1
 Done.
 Extracting dependency: /Users/runner/.konan/dependencies/cache/libffi-3.3-1-macos-arm64.tar.gz into /Users/runner/.konan/dependencies
 
-> Task :probe:kspKotlinIosSimulatorArm64
+> Task :probe:kspKotlinIosSimulatorArm64 FROM-CACHE
 > Task :probe:copyRoomSchemas
+> Task :probe:compileKotlinIosSimulatorArm64 FROM-CACHE
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790437902518.json
 
-> Task :probe:compileKotlinIosSimulatorArm64
-w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/build/generated/ksp/iosSimulatorArm64/iosSimulatorArm64Main/kotlin/phase35/probe/ProbeDatabaseConstructor.kt:5:8 'expect'/'actual' classes (including interfaces, objects, annotations, enums, and 'actual' typealiases) are in Beta. Consider using the '-Xexpect-actual-classes' flag to suppress this warning. Also see: https://youtrack.jetbrains.com/issue/KT-61573
-w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonMain/kotlin/phase35/probe/ProbeDatabase.kt:54:1 'expect'/'actual' classes (including interfaces, objects, annotations, enums, and 'actual' typealiases) are in Beta. Consider using the '-Xexpect-actual-classes' flag to suppress this warning. Also see: https://youtrack.jetbrains.com/issue/KT-61573
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790437268335.json
-
-BUILD SUCCESSFUL in 53s
-5 actionable tasks: 5 executed
+BUILD SUCCESSFUL in 23s
+5 actionable tasks: 3 executed, 2 from cache
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
 ### 20-link.txt
@@ -81,15 +78,16 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 > Task :probe:kmpPartiallyResolvedDependenciesChecker
 > Task :probe:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :probe:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :probe:kspKotlinIosSimulatorArm64
+> Task :probe:kspKotlinIosSimulatorArm64 FROM-CACHE
 > Task :probe:copyRoomSchemas NO-SOURCE
 > Task :probe:compileKotlinIosSimulatorArm64 UP-TO-DATE
+
 > Task :probe:linkDebugFrameworkIosSimulatorArm64
 w: The number of threads 4 is more than the number of processors 3
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790437319404.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790437924993.json
 
-BUILD SUCCESSFUL in 41s
-5 actionable tasks: 3 executed, 2 up-to-date
+BUILD SUCCESSFUL in 25s
+5 actionable tasks: 2 executed, 1 from cache, 2 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
 ### 30-tests.txt
@@ -107,7 +105,6 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 > Task :probe:compileTestKotlinIosSimulatorArm64
 w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:153:74 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
 w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:189:74 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
-w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/iosTest/kotlin/phase35/probe/Connection.kt:29:41 No cast needed.
 
 > Task :probe:linkDebugTestIosSimulatorArm64
 w: The number of threads 4 is more than the number of processors 3
@@ -115,21 +112,13 @@ w: The number of threads 4 is more than the number of processors 3
 > Task :probe:iosSimulatorArm64Test
 
 
-phase35.probe.MigrationBehaviourTest.v6 to v7 drops colour and keeps every note intact[iosSimulatorArm64] FAILED
-    androidx.sqlite.SQLiteException at /Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:26
-
 phase35.probe.MigrationBehaviourTest.search still answers with the right notes after the rebuild[iosSimulatorArm64] FAILED
-    androidx.sqlite.SQLiteException at /Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:108
-
-phase35.probe.PlatformSupportTest.report what this platform's full text search supports[iosSimulatorArm64] FAILED
-    androidx.sqlite.SQLiteException at null:-1
-
-> Task :probe:iosSimulatorArm64Test
-
-3 tests completed, 3 failed
+    androidx.sqlite.SQLiteException at /Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:110
 
 > Task :probe:iosSimulatorArm64Test FAILED
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790437361172.json
+
+3 tests completed, 1 failed
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790437950365.json
 
 FAILURE: Build failed with an exception.
 
@@ -280,6 +269,6 @@ Caused by: org.gradle.api.internal.exceptions.MarkedVerificationException: There
 	... 30 more
 
 
-BUILD FAILED in 1m 24s
+BUILD FAILED in 1m 15s
 8 actionable tasks: 5 executed, 3 up-to-date
 ```
