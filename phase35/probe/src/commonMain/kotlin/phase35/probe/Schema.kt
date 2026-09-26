@@ -11,6 +11,10 @@ import androidx.room3.PrimaryKey
  * A schema-accurate mirror of the Prime Notes tables, at the current v7 shape. Column names, types,
  * nullability, indices and foreign keys are copied from what the app's own `app/schemas/…/7.json`
  * records, because a probe against a different schema would prove nothing about the real upgrade.
+ *
+ * The search index is FTS4, which is what that schema declares and therefore what the generated
+ * v6 -> v7 migration produces. FTS5 was tried here and reverted for two measured reasons, recorded
+ * on the entity below.
  */
 @Entity(
     tableName = "folders",
@@ -105,7 +109,23 @@ data class NoteTagCrossRef(
     @ColumnInfo(name = "tag_id") val tagId: String
 )
 
-/** External-content FTS4, exactly as the app declares it. */
+/**
+ * External-content full-text index, FTS4 — the shape Prime Notes' own v6 schema declares, and the
+ * shape the generated v6 -> v7 migration therefore produces.
+ *
+ * FTS5 was tried here and reverted. Two reasons, both measured rather than assumed:
+ *
+ *  * Declaring FTS5 makes the entity disagree with the committed v6 schema, which is FTS4, so Room
+ *    generates a migration from one shape to a shape the upgrade never had.
+ *  * FTS5 availability is not uniform even between SQLite builds on the same machine: a
+ *    Windows `sqlite3.exe` on this workstation reports `no such module: FTS5` while the bundled
+ *    driver has both FTS4 and FTS5. So FTS5 cannot be assumed anywhere without checking that build.
+ *
+ * The FTS4 statement failed on the iOS runner at the very first
+ * `CREATE VIRTUAL TABLE ... USING FTS4`, with no message attached by the driver. `PlatformSupportTest`
+ * now prints what the iOS build actually supports — version, FTS4, FTS5, external content, and the
+ * app's exact table shape — so the next run states the cause instead of leaving it to be guessed at.
+ */
 @Fts4(contentEntity = NoteEntity::class)
 @Entity(tableName = "notes_fts")
 data class NoteFtsEntity(

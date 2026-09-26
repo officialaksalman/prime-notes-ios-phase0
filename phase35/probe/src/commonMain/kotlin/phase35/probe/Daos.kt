@@ -6,7 +6,7 @@ import androidx.room3.OnConflictStrategy
 import androidx.room3.Query
 import kotlinx.coroutines.flow.Flow
 
-/** CRUD plus the two behaviours that must survive on iOS: soft delete, and FTS4 search. */
+/** CRUD plus the two behaviours that must survive on iOS: soft delete, and full-text search. */
 @Dao
 interface NoteDao {
 
@@ -25,6 +25,11 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE purged_at IS NOT NULL")
     suspend fun purged(): List<NoteEntity>
 
+    /**
+     * FTS4 over the external-content table, joining on `docid` — the column an FTS4 external-content
+     * table exposes. FTS5 has no `docid` and uses `rowid` instead, so this line is one of the places
+     * FTS4 and FTS5 differ, should the index ever move.
+     */
     @Query("SELECT notes.* FROM notes JOIN notes_fts ON notes.rowid = notes_fts.docid WHERE notes_fts MATCH :query AND notes.deleted_at IS NULL")
     fun ftsSearch(query: String): Flow<List<NoteEntity>>
 
