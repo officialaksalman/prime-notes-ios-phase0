@@ -1,20 +1,20 @@
 # Phase 3.5 — room3 on iOS
 
-Run [36253841695](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36253841695) on `macos-15`.
+Run [36254288992](https://github.com/officialaksalman/prime-notes-ios-phase0/actions/runs/36254288992) on `macos-15`.
 
-Sandbox commit: `03adc74d517f4665ceafd438d6bf7c6d7571eba9`
+Sandbox commit: `c3c72439e3d7f62a23efbdab5adbeca89bcf4315`
 
 ## phase35-room3-ios-logs
 ```
-sha=03adc74d517f4665ceafd438d6bf7c6d7571eba9
+sha=c3c72439e3d7f62a23efbdab5adbeca89bcf4315
 compileKotlinIosSimulatorArm64=success
 linkDebugFrameworkIosSimulatorArm64=success
 iosSimulatorArm64Test=success
 ```
 ### test results
 ```
-<testsuite name="iosSimulatorArm64Test.phase35.probe.MigrationBehaviourTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-09-26T16:04:04.432Z" hostname="sat12-bq150-a00c05bc-15bc-41be-b613-32448975633a-42B3592A0A22.local" time="0.043">
-<testsuite name="iosSimulatorArm64Test.phase35.probe.PlatformSupportTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-26T16:04:04.475Z" hostname="sat12-bq150-a00c05bc-15bc-41be-b613-32448975633a-42B3592A0A22.local" time="0.006">
+<testsuite name="iosSimulatorArm64Test.phase35.probe.MigrationBehaviourTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-09-26T16:10:16.185Z" hostname="sjc22-bt151-07d4329e-8d78-41ca-919b-379cafecf9ca-929E13BF0C41.local" time="0.041">
+<testsuite name="iosSimulatorArm64Test.phase35.probe.PlatformSupportTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-26T16:10:16.226Z" hostname="sjc22-bt151-07d4329e-8d78-41ca-919b-379cafecf9ca-929E13BF0C41.local" time="0.009">
 ```
 ### 00-toolchain.txt
 ```
@@ -67,9 +67,9 @@ Extracting dependency: /Users/runner/.konan/dependencies/cache/libffi-3.3-1-maco
 > Task :probe:kspKotlinIosSimulatorArm64 FROM-CACHE
 > Task :probe:copyRoomSchemas
 > Task :probe:compileKotlinIosSimulatorArm64 FROM-CACHE
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790438480380.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/compile-1790438932588.json
 
-BUILD SUCCESSFUL in 23s
+BUILD SUCCESSFUL in 24s
 5 actionable tasks: 3 executed, 2 from cache
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
@@ -84,9 +84,9 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 
 > Task :probe:linkDebugFrameworkIosSimulatorArm64
 w: The number of threads 4 is more than the number of processors 3
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790438502298.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/link-1790438956032.json
 
-BUILD SUCCESSFUL in 23s
+BUILD SUCCESSFUL in 25s
 5 actionable tasks: 2 executed, 1 from cache, 2 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
@@ -99,20 +99,14 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 > Task :probe:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :probe:iosSimulatorArm64ProcessResources NO-SOURCE
 > Task :probe:iosSimulatorArm64MainKlibrary UP-TO-DATE
-> Task :probe:kspTestKotlinIosSimulatorArm64
+> Task :probe:kspTestKotlinIosSimulatorArm64 FROM-CACHE
 > Task :probe:copyRoomSchemas NO-SOURCE
-
-> Task :probe:compileTestKotlinIosSimulatorArm64
-w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:153:74 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
-w: file:///Users/runner/work/prime-notes-ios-phase0/prime-notes-ios-phase0/phase35/probe/src/commonTest/kotlin/phase35/probe/MigrationBehaviourTest.kt:189:74 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
-
-> Task :probe:linkDebugTestIosSimulatorArm64
-w: The number of threads 4 is more than the number of processors 3
-
+> Task :probe:compileTestKotlinIosSimulatorArm64 FROM-CACHE
+> Task :probe:linkDebugTestIosSimulatorArm64 FROM-CACHE
 > Task :probe:iosSimulatorArm64Test
-gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790438526424.json
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/test-1790438981374.json
 
-BUILD SUCCESSFUL in 1m 58s
-8 actionable tasks: 5 executed, 3 up-to-date
+BUILD SUCCESSFUL in 35s
+8 actionable tasks: 2 executed, 3 from cache, 3 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
 ```
