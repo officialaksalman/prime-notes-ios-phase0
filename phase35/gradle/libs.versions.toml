@@ -1,0 +1,26 @@
+[versions]
+kotlin = "2.3.20"
+agpKmp = "9.4.0"
+ksp = "2.3.12"
+room3 = "3.1.0-alpha01"
+sqlite = "2.8.0-alpha01"
+coroutines = "1.10.2"
+
+[libraries]
+room3-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room3" }
+# The processor, not the runtime. Putting `room3-runtime` on the KSP classpath yields
+# "No providers found in processor classpath" — the runtime ships no annotation processor.
+room3-compiler = { group = "androidx.room3", name = "room3-compiler", version.ref = "room3" }
+sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "sqlite" }
+sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
+# `sqlite-bundled` publishes per-platform modules, so the JVM one is a *different artifact*. This
+# is the host test harness only; the iOS build uses 2.8.0-alpha01 above.
+sqlite-bundled-host = { group = "androidx.sqlite", name = "sqlite-bundled-jvm", version = "2.7.1" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+
+[plugins]
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agpKmp" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room3 = { id = "androidx.room3", version.ref = "room3" }
