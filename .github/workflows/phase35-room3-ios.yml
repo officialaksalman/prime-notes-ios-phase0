@@ -1,9 +1,9 @@
 # Prime Notes — Phase 3.5: can room3 run this app's database on iOS?
 #
 # The question. Prime Notes' Android database is `androidx.room` 2.8.5, whose KMP artifacts contain
-# annotations only — no RoomDatabase, no Builder, no Migration, no AutoMigrationSpec. So 2.8.5 can
-# hold entities, DAOs and repositories as common code (that is what Phase 3 did) but cannot own a
-# database on iOS. The candidate is `androidx.room3` 3.1.0-alpha01.
+# annotations only — no RoomDatabase, no Builder, no addMigrations, no Migration, no
+# AutoMigrationSpec. So 2.8.5 can hold entities, DAOs and repositories as common code (that is what
+# Phase 3 did) but cannot own a database on iOS. The candidate is `androidx.room3` 3.1.0-alpha01.
 #
 # WHAT THIS RUNS. `phase35/probe` is a self-contained throwaway build: seven entities copied from
 # Prime Notes' own schema, FTS4 external content, and the real v6 schema committed under
@@ -24,8 +24,13 @@
 # that compiles and then misbehaves.
 #
 # FAILURE DETECTION: every gradlew step sets `pipefail`. Without it a `gradlew ... | tee log`
-# pipeline reports tee's exit code and a failed build is recorded as a success — a bug that already
-# produced one false green run in Phase 0.
+# pipeline reports tee's exit code (0) and a failed build is recorded as a success — a bug that
+# already produced one false green run in Phase 0.
+#
+# WHY THE EXTRACTED TEST OUTPUT IS A STEP OF ITS OWN. On the first run the migration tests failed
+# and the reason was lost, because the only copy of the log was inside the run's artifacts and the
+# results commit was rejected. So the failing assertions are now echoed into the step log itself,
+# before anything else can swallow them.
 
 name: phase35 — room3 on iOS
 
@@ -116,6 +121,27 @@ jobs:
           ./gradlew -p phase35 :probe:iosSimulatorArm64Test \
             --stacktrace 2>&1 | tee logs/30-tests.txt
 
+      # Runs whatever the test step did, and fails with the same outcome, so the reason a red run
+      # is red is visible in the run summary and not only inside a downloadable artifact.
+      - name: "Report the test outcome, with the failure if there was one"
+        if: always()
+        run: |
+          set -o pipefail
+          echo "iosSimulatorArm64Test outcome: ${{ steps.test.outcome }}"
+          echo
+          for f in $(find phase35 -path '*/build/test-results/*' -name '*.xml' 2>/dev/null); do
+            echo "--- $f"
+            head -c 4000 "$f"
+            echo
+          done
+          echo
+          echo "--- last 120 lines of the test log"
+          if [ -f logs/30-tests.txt ]; then
+            tail -n 120 logs/30-tests.txt
+          else
+            echo "(no test log was written)"
+          fi
+
       - name: Collect test results
         if: always()
         run: |
@@ -172,7 +198,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Build RESULTS.md
+      - name: Build RESULTS-PHASE35.md
         run: |
           {
             echo "# Phase 3.5 — room3 on iOS"
@@ -223,5 +249,19 @@ jobs:
             echo "no changes to RESULTS-PHASE35.md"
           else
             git commit -m "Phase 3.5 iOS results for ${{ github.sha }} [skip ci]"
-            git push
+            # Rebase before pushing. The `shared — iOS` workflow also commits a results file on
+            # `main`, so whichever pushes second is rejected as non-fast-forward. That is how this
+            # workflow's first result was lost. `|| true` on the pull so a rebase conflict does not
+            # abort before the push is attempted.
+            for attempt in 1 2 3; do
+              git pull --rebase --autostash origin main || true
+              if git push; then
+                echo "pushed on attempt $attempt"
+                exit 0
+              fi
+              echo "push rejected (attempt $attempt); retrying"
+              sleep 5
+            done
+            echo "could not push RESULTS-PHASE35.md after 3 attempts"
+            exit 1
           fi
